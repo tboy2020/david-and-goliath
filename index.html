@@ -163,18 +163,22 @@
   }
   function hasMic(){ return !!(window.SpeechRecognition||window.webkitSpeechRecognition); }
   function speakThen(text, next, pad){ safeSpeak(text, function(){ setTimeout(next, pad||300); }); }
-  function listenPatient(keys, lenient, onMatch, onEnd){
+  function listenPatient(matcher, onMatch, onEnd){
     var Rec=window.SpeechRecognition||window.webkitSpeechRecognition;
     if(!Rec){ if(onEnd) onEnd('nomic'); return null; }
     try{
       var r=new Rec(); r.lang='en-US'; r.continuous=true; r.interimResults=true; r.maxAlternatives=3; var matched=false;
-      function ok(text){ var s=text.toLowerCase().replace(/[^a-z ]/g,' '); if(!keys.length) return true; var h=keys.filter(function(k){return s.indexOf(k)>-1;}).length; var need=lenient?Math.min(keys.length,Math.min(3,Math.max(2,Math.ceil(keys.length*0.6)))):keys.length; return h>=need; }
-      r.onresult=function(ev){ var all=''; for(var i=0;i<ev.results.length;i++){ for(var j=0;j<ev.results[i].length;j++){ all+=' '+ev.results[i][j].transcript; } } if(!matched && ok(all)){ matched=true; try{r.stop();}catch(_){} onMatch(); } };
+      r.onresult=function(ev){ var all=''; for(var i=0;i<ev.results.length;i++){ for(var j=0;j<ev.results[i].length;j++){ all+=' '+ev.results[i][j].transcript; } } if(!matched && matcher(all)){ matched=true; try{r.stop();}catch(_){} onMatch(); } };
       r.onerror=function(){};
       r.onend=function(){ clearTimeout(r._to); if(onEnd) onEnd(matched?'matched':'end'); };
-      r.start(); r._to=setTimeout(function(){ try{r.stop();}catch(_){} }, 15000); return r;
+      r.start(); r._to=setTimeout(function(){ try{r.stop();}catch(_){} }, 20000); return r;
     }catch(e){ if(onEnd) onEnd('err'); return null; }
   }
+  function normTxt(t){ return ' '+t.toLowerCase().replace(/[^a-z ]/g,' ').replace(/\s+/g,' ').trim()+' '; }
+  var TINY={a:1,an:1,the:1,to:1,of:1,in:1,on:1,and:1,as:1,is:1,it:1,my:1,me:1,us:1,we:1,i:1,o:1,be:1,for:1,thy:1,this:1,that:1,his:1,our:1};
+  function keyMatcher(keys){ return function(t){ if(!keys||!keys.length) return true; var s=normTxt(t); var h=keys.filter(function(k){return s.indexOf(k)>-1;}).length; return h>=keys.length; }; }
+  function lineMatcher(text){ var ws=normTxt(text).trim().split(' ').filter(function(w){return w.length>=2 && !TINY[w];});
+    return function(t){ if(!ws.length) return true; var s=normTxt(t); var h=ws.filter(function(w){return s.indexOf(' '+w+' ')>-1;}).length; var need=ws.length<=2?ws.length:Math.max(2,Math.ceil(ws.length*0.8)); return h>=need; }; }
 
   /* ============ SAVE / SETTINGS ============ */
   var PROF_KEY='dg_profiles_v2', PIN_KEY='dg_pin_v2', PRAY_KEY='dg_prayers_v2';
@@ -325,7 +329,7 @@
       '<p class="narr" style="max-width:440px">Be faithful in the little things \u2014 then face the giant in the name of the LORD!</p>'+
       '<button class="btn" id="startBtn">Tap to Begin ▶</button>'+
       '<p class="hint">Turn your sound on \u2014 David will talk to you!</p>'+
-      '<p class="hint" style="opacity:.55">v2.4 \u00b7 prayer match\u2019s Day</p></div>');
+      '<p class="hint" style="opacity:.55">v2.5 \u00b7 whole line\u2019s Day</p></div>');
     on($('#startBtn'),'click',function(){ unlockAudio(); setTimeout(profilesScreen,120); });
   }
   function profilesScreen(){
@@ -426,18 +430,18 @@
         (hasMic()?'<div class="mic" id="mic">🎤</div><p class="hint" id="mh">Listen, then say it \u2014 take your time</p>'
                  :'<p class="hint">Say it out loud together!</p>')+
         '<div class="row"><button class="btn small ghost" id="repeat">🔊 Hear again</button>'+
-        '<button class="btn" id="said">I said it ✓</button></div>'+
+        '<button class="btn" id="said" disabled>I said it ✓</button></div>'+
         '<button class="btn ghost small" id="exitP" style="margin-top:4px">Exit</button></div>');
       wireTop();
       function advance(){ if(advanced) return; advanced=true; if(curRec){ try{curRec.stop();}catch(_){} } sfx('good'); var m=$('#mic'); if(m) m.classList.remove('listening'); i++; if(i>=lines.length){ donePrayer(); } else { setTimeout(renderLine,450); } }
       function startListen(){ if(!hasMic()||advanced) return; var mic=$('#mic'); if(mic) mic.classList.add('listening'); var mh=$('#mh'); if(mh) mh.textContent='Your turn \u2014 say it now (take your time)'; stopSpeak();
-        curRec=listenPatient(ln.keys, ln.lenient, function(){ advance(); }, function(){ var m=$('#mic'); if(m) m.classList.remove('listening'); if(!advanced){ var h=$('#mh'); if(h) h.textContent='Tap the mic to try again, or \u201CI said it ✓\u201D'; } }); }
+        curRec=listenPatient(lineMatcher(ln.t), function(){ advance(); }, function(){ var m=$('#mic'); if(m) m.classList.remove('listening'); if(!advanced){ var h=$('#mh'); if(h) h.textContent='Tap the mic to try again, or \u201CI said it ✓\u201D'; } }); }
       on($('#said'),'click',advance);
-      on($('#repeat'),'click',function(){ if(advanced) return; safeSpeak(ln.t, function(){ startListen(); }, {rate:0.82}); });
+      on($('#repeat'),'click',function(){ if(advanced) return; safeSpeak(ln.t, function(){ var sb=$('#said'); if(sb) sb.disabled=false; startListen(); }, {rate:0.82}); });
       on($('#exitP'),'click',homeScreen);
       if(hasMic()){ on($('#mic'),'click',startListen); }
       // read the line aloud, then automatically begin listening so children just repeat it
-      safeSpeak(ln.t, function(){ startListen(); }, {rate:0.84});
+      safeSpeak(ln.t, function(){ var sb=$('#said'); if(sb) sb.disabled=false; startListen(); }, {rate:0.84});
     }
     function donePrayer(){
       sfx('amen');
@@ -897,7 +901,7 @@
       speakThen(line, cfg.next, 400); }
     on($('#said'),'click',advance);
     if(hr){ var mic=$('#mic'); on(mic,'click',function(){ mic.classList.add('listening'); var mh=$('#mh'); if(mh) mh.textContent='Listening\u2026 say it now (take your time)'; stopSpeak();
-      listenPatient(cfg.keys,false,function(){ advance(); },function(){ mic.classList.remove('listening'); if(!done){ var h=$('#mh'); if(h) h.textContent='Tap the mic to try again, or \u201CI said it ✓\u201D'; } }); }); }
+      listenPatient(keyMatcher(cfg.keys),function(){ advance(); },function(){ mic.classList.remove('listening'); if(!done){ var h=$('#mh'); if(h) h.textContent='Tap the mic to try again, or \u201CI said it ✓\u201D'; } }); }); }
   }
 
   /* ============ PARENT SECTION ============ */
