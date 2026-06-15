@@ -312,7 +312,7 @@
       '<p class="narr" style="max-width:440px">Be faithful in the little things \u2014 then face the giant in the name of the LORD!</p>'+
       '<button class="btn" id="startBtn">Tap to Begin ▶</button>'+
       '<p class="hint">Turn your sound on \u2014 David will talk to you!</p>'+
-      '<p class="hint" style="opacity:.55">v2.1 \u00b7 A Shepherd\u2019s Day</p></div>');
+      '<p class="hint" style="opacity:.55">v2.2 \u00b7 Helping Day\u2019s Day</p></div>');
     on($('#startBtn'),'click',function(){ unlockAudio(); setTimeout(profilesScreen,120); });
   }
   function profilesScreen(){
@@ -553,65 +553,126 @@
     rounds[idx](step);
   }
 
-  /* ============ CHORE: FOOD (pack list -> walk -> give) ============ */
+  /* ============ CHORE: FOOD — A Helping Day (8 stages, tap-or-drag) ============ */
   function choreFood(){
-    var FOODS=[['🍞','bread',12,20],['🧀','cheese',60,16],['🫓','flatbread',38,46],['🍇','grapes',74,48],['🥖','loaf',20,54]];
-    var want=['bread','cheese','grapes'];
-    function pack(){
-      var items=FOODS.map(function(f,i){ return '<div class="tap fooditem" data-name="'+f[1]+'" style="position:absolute; left:'+f[2]+'%; top:'+f[3]+'%; font-size:46px">'+f[0]+'</div>'; }).join('');
-      render(topbar(false)+'<div class="screen" style="justify-content:flex-start; padding-top:60px">'+
-        choreHeader('food','Step 1 \u2014 pack the basket')+
-        '<p class="narr" id="fn">Pack <b>bread, cheese and grapes</b> into the basket.</p>'+
-        '<div class="arena" style="background:linear-gradient(180deg,#caa46a,#9b7a44)"><div id="basket" style="position:absolute; left:50%; bottom:6px; transform:translateX(-50%); font-size:60px">🧺</div>'+items+'</div>'+
+    var BASKET='<div id="tgt" style="position:absolute; left:50%; bottom:8px; transform:translateX(-50%); font-size:74px">🧺</div>';
+
+    function dragItems(cfg){
+      var items=cfg.items.map(function(it,i){ return '<div class="sheepy" data-i="'+i+'" style="left:'+it.x+'%; top:'+it.y+'%; font-size:'+(it.size||44)+'px">'+it.e+'</div>'; }).join('');
+      render(topbar(false)+'<div class="screen" style="justify-content:flex-start; padding-top:54px">'+
+        choreHeader('food',cfg.sub)+
+        '<p class="narr" id="sn">'+cfg.narr+'</p>'+
+        '<div class="arena" id="arena" style="background:linear-gradient(180deg,'+(cfg.bg||'#caa46a,#9b7a44')+'); touch-action:none">'+
+          cfg.targetHtml+'<div class="counter" id="cnt">'+(cfg.icon||'🧺')+' 0/'+cfg.need+'</div>'+items+'</div>'+
         '<button class="btn ghost small" id="backC">Back</button></div>');
       wireTop(); on($('#backC'),'click',homeScreen);
-      var packed=[]; safeSpeak('Pack the basket. Mum and Dad need bread, cheese and grapes.');
-      $all('.fooditem').forEach(function(it){ on(it,'click',function(){ var nm=it.getAttribute('data-name'); if(it.dataset.done) return;
-        if(want.indexOf(nm)===-1){ sfx('thud'); it.classList.add('shake'); safeSpeak('Not that one. We need bread, cheese and grapes.'); setTimeout(function(){it.classList.remove('shake');},500); return; }
-        it.dataset.done='1'; packed.push(nm); sfx('plink'); var r=it.getBoundingClientRect(); sparkleAt(r.left+18,r.top);
-        it.style.transition='all .5s'; it.style.left='50%'; it.style.top='82%'; it.style.opacity='0';
-        $('#fn').textContent=packed.length+' / 3 packed'; safeSpeak(nm);
-        if(packed.length>=3){ setTimeout(walk,700); } }); });
+      safeSpeak(cfg.voice);
+      var arena=$('#arena'), got=0;
+      $all('.sheepy').forEach(function(el){
+        tapOrDrag(el, arena, function(){ return centerOf($('#tgt'),arena,cfg.radius||100); }, function(){
+          got++; var c=$('#cnt'); if(c) c.textContent=(cfg.icon||'🧺')+' '+got+'/'+cfg.need; safeSpeak(String(got));
+          if(got>=cfg.need){ var sn=$('#sn'); if(sn) sn.textContent=cfg.doneText; sfx('cheer'); safeSpeak(cfg.doneVoice); setTimeout(cfg.onDone,1300); }
+        });
+      });
     }
-    function walk(){
+
+    function s_yes(done){ speakCheckpoint({ ref:'Ephesians 6:1', speaker:'🙋', setup:'Mum and Dad need help today. Say it like a cheerful helper:', line:'Yes, I will help!', keys:['yes','help'], okText:'Good! A cheerful helper always says yes.', next:done }); }
+
+    function s_pick(done){ dragItems({ sub:'Pick the fruit', bg:'#7FB84B,#4c7a34', icon:'🧺', need:5,
+      narr:'Pick the ripe fruit \u2014 tap or drag each into the basket.',
+      voice:'Pick the ripe fruit from the vine. Tap or drag each one into the basket.',
+      targetHtml:BASKET, items:[{e:'🍇',x:18,y:20},{e:'🫒',x:64,y:16},{e:'🍇',x:42,y:40},{e:'🍈',x:74,y:48},{e:'🍇',x:24,y:58}],
+      doneText:'A basket of good fruit!', doneVoice:'A basket full of good fruit!', onDone:done }); }
+
+    function s_bake(done){
+      render(topbar(false)+'<div class="screen" style="justify-content:flex-start; padding-top:54px">'+
+        choreHeader('food','Bake the bread')+
+        '<p class="narr" id="sn">Pat the dough to knead it \u2014 8 pats!</p>'+
+        '<div class="arena" id="arena" style="background:linear-gradient(180deg,#caa46a,#9b7a44)">'+
+          '<div id="dough" class="tap" style="position:absolute; left:50%; top:46%; transform:translate(-50%,-50%); font-size:96px">🫓</div>'+
+          '<div class="counter" id="cnt">0/8</div></div>'+
+        '<button class="btn ghost small" id="backC">Back</button></div>');
+      wireTop(); on($('#backC'),'click',homeScreen);
+      safeSpeak('Help Mum bake the bread. Pat the dough eight times to knead it!');
+      var n=0, d=$('#dough');
+      on(d,'click',function(){ n++; sfx('tap'); d.style.transform='translate(-50%,-50%) scale('+(1+n*0.05)+')';
+        $('#cnt').textContent=n+'/8'; if(n<8) safeSpeak(String(n));
+        if(n>=8){ d.textContent='🍞'; $('#sn').textContent='Fresh bread, baked with love!'; sfx('cheer'); safeSpeak('Fresh bread, baked with love!'); setTimeout(done,1200); } });
+    }
+
+    function s_pack(done){
+      var lp=[[12,18],[34,12],[56,14],[78,18],[20,38],[42,38],[64,40],[14,58],[40,60],[68,58]], loaves=[];
+      lp.forEach(function(p){ loaves.push({e:'🍞',x:p[0],y:p[1],size:36}); });
+      dragItems({ sub:'Pack the basket', bg:'#caa46a,#9b7a44', icon:'🧺', need:10,
+        narr:'Pack ten loaves into the basket. Count them \u2014 all the way to 10!',
+        voice:'Jesse said, take these ten loaves to the camp. Pack ten loaves into the basket, and count to ten!',
+        targetHtml:BASKET, items:loaves, doneText:'Ten loaves \u2014 packed and ready! (1 Samuel 17:17)', doneVoice:'Ten loaves, packed and ready!', onDone:done });
+    }
+
+    function s_water(done){ dragItems({ sub:'Fetch water for Mum', bg:'#d8c08a,#b89a5a', icon:'🏺', need:1, radius:120,
+      narr:'Carry the water jar to Mum.',
+      voice:'Mum needs water. Carry the heavy jar all the way to her.',
+      targetHtml:'<div id="tgt" style="position:absolute; left:16px; bottom:14px; font-size:66px">👩🏽</div>',
+      items:[{e:'🏺',x:60,y:30,size:56}], doneText:'Fresh water for Mum!', doneVoice:'Fresh, cool water for Mum. Thank you!', onDone:done }); }
+
+    function s_walk(done){
       var steps=6, at=0;
       function draw(){
         var davX=8+(at/steps)*72;
-        render(topbar(false)+'<div class="screen" style="justify-content:flex-start; padding-top:60px">'+
-          choreHeader('food','Step 2 \u2014 carry it to Mum & Dad')+
+        render(topbar(false)+'<div class="screen" style="justify-content:flex-start; padding-top:54px">'+
+          choreHeader('food','Carry it to Mum & Dad')+
           '<p class="narr" id="wn">Tap <b>Step ▶</b> to carry the basket along the path. ('+at+'/'+steps+')</p>'+
-          '<div class="arena" style="background:linear-gradient(180deg,#8Fb6e0,#6FA84B 70%)">'+
-            '<div style="position:absolute; left:0; right:0; bottom:40px; height:14px; background:repeating-linear-gradient(90deg,#caa46a 0 24px,#b58d5a 24px 48px)"></div>'+
-            '<div style="position:absolute; right:14px; bottom:54px; font-size:40px">🏠</div>'+
-            '<div style="position:absolute; right:16px; bottom:96px; font-size:34px">👩🏽👨🏽</div>'+
-            '<div id="davw" style="position:absolute; left:'+davX+'%; bottom:54px; transition:left .4s"><svg width="56" height="92" viewBox="-60 -110 120 150">'+davidSVG(0.62)+'</svg></div>'+
-            '<div style="position:absolute; left:'+davX+'%; bottom:46px; font-size:24px; transition:left .4s">🧺</div>'+
-          '</div>'+
+          '<div class="arena" id="arena" style="background:linear-gradient(180deg,#8Fb6e0,#6FA84B 70%)">'+
+            '<div style="position:absolute; left:0; right:0; bottom:38px; height:14px; background:repeating-linear-gradient(90deg,#caa46a 0 24px,#b58d5a 24px 48px)"></div>'+
+            '<div style="position:absolute; right:14px; bottom:52px; font-size:50px">🏠</div>'+
+            '<div style="position:absolute; right:20px; bottom:108px; font-size:38px">👩🏽👨🏽</div>'+
+            '<div style="position:absolute; left:'+davX+'%; bottom:52px; transition:left .4s"><svg width="58" height="96" viewBox="-60 -110 120 150">'+davidSVG(0.62)+'</svg></div>'+
+            '<div style="position:absolute; left:'+davX+'%; bottom:44px; font-size:28px; transition:left .4s">🧺</div></div>'+
           '<button class="btn" id="stepBtn">Step ▶</button>'+
           '<button class="btn ghost small" id="backC">Back</button></div>');
         wireTop(); on($('#backC'),'click',homeScreen);
-        on($('#stepBtn'),'click',function(){ at++; sfx('tap'); if(at>=steps){ give(); } else { draw(); } });
+        on($('#stepBtn'),'click',function(){ at++; sfx('tap'); if(at>=steps){ done(); } else { draw(); } });
       }
       safeSpeak('Now carry the basket along the path to Mum and Dad. Tap step to walk!');
       draw();
     }
-    function give(){
-      render(topbar(false)+'<div class="screen">'+choreHeader('food','Step 3 \u2014 give the food')+
+
+    function s_table(done){
+      var items=[{e:'🍽️',x:16,y:18},{e:'🥛',x:38,y:16},{e:'🍽️',x:60,y:18},{e:'🥛',x:80,y:20},{e:'🍽️',x:22,y:40},{e:'🥛',x:46,y:42},{e:'🍽️',x:68,y:40},{e:'🥛',x:84,y:44}];
+      dragItems({ sub:'Set the table', bg:'#9b7a44,#7a5e34', icon:'🍽️', need:8, radius:120,
+        narr:'Set the table \u2014 place each plate and cup. Count them!',
+        voice:'Set the table for the whole family. Place each plate and cup, and count them all.',
+        targetHtml:'<div id="tgt" style="position:absolute; left:50%; bottom:14px; transform:translateX(-50%); width:170px; height:62px; background:#8a5a2a; border-radius:14px; border:3px solid #6e4a26"></div>',
+        items:items, doneText:'The table is set for the family!', doneVoice:'The table is beautifully set. Well done!', onDone:done });
+    }
+
+    function s_give(done){
+      render(topbar(false)+'<div class="screen">'+choreHeader('food','Give the food')+
         '<div style="font-size:60px; margin:6px">🧺</div>'+
-        '<div class="row" style="gap:26px; font-size:60px"><span class="tap" id="mum">👩🏽</span><span class="tap" id="dad">👨🏽</span></div>'+
-        '<p class="narr" id="gn">Tap Mum, then Dad, to give the food.</p></div>');
+        '<div class="row" style="gap:28px; font-size:66px"><span class="tap" id="mum">👩🏽</span><span class="tap" id="dad">👨🏽</span></div>'+
+        '<p class="narr" id="gn">Tap Mum, then Dad, to give the food.</p>'+
+        '<button class="btn" id="cont" style="display:none">Continue ▶</button></div>');
       wireTop();
-      safeSpeak('Give the food to Mum, then Dad.');
+      safeSpeak('Give the food to Mum, then to Dad.');
       var given=0;
       function got(who,el){ if(el.dataset.done) return; el.dataset.done='1'; given++; sfx('good');
-        var r=el.getBoundingClientRect(); sparkleAt(r.left+20,r.top);
-        safeSpeak(who+' says, thank you '+ST.save.name+'! God bless you.');
-        $('#gn').textContent='\u201CBless you, '+ST.save.name+'!\u201D';
-        if(given>=2){ setTimeout(function(){ completeChore('food'); },1100); } }
+        var r=el.getBoundingClientRect(); sparkleAt(r.left+24,r.top);
+        if(given<2){ $('#gn').textContent='Now tap '+(who==='Mum'?'Dad':'Mum')+'.'; }
+        safeSpeak(who+' says, thank you '+ST.save.name+'! God bless you.', function(){
+          if(given>=2 && $('#mum').dataset.done && $('#dad').dataset.done){ $('#gn').textContent='\u201CHonour thy father and thy mother.\u201D (Exodus 20:12)'; var c=$('#cont'); if(c) c.style.display='inline-block'; }
+        });
+      }
       on($('#mum'),'click',function(){ got('Mum',this); });
       on($('#dad'),'click',function(){ got('Dad',this); });
+      on($('#cont'),'click',done);
     }
-    pack();
+
+    var stages=[s_yes,s_pick,s_bake,s_pack,s_water,s_walk,s_table,s_give];
+    var idx=ST.save.foodStage||0; if(idx>=stages.length) idx=0;
+    function step(){ idx++; ST.save.foodStage=idx; persist();
+      if(idx>=stages.length){ ST.save.foodStage=0; persist(); completeChore('food'); }
+      else { stages[idx](step); } }
+    stages[idx](step);
   }
 
   /* ============ CHORE: SWEEP (3 rooms + tidy) ============ */
@@ -825,8 +886,9 @@
     safeSpeak(cfg.setup+' '+cfg.line);
     var done=false;
     function advance(){ if(done) return; done=true; sfx('good'); stopSpeak(); var m=$('#mic'); if(m) m.classList.remove('listening');
-      if(cfg.verse){ safeSpeak('Amen! '+cfg.verse, function(){}); } else { safeSpeak('Amen! Well said!'); }
-      setTimeout(cfg.next, cfg.verse?1400:700); }
+      if(cfg.okText){ safeSpeak(cfg.okText, function(){}); }
+      else if(cfg.verse){ safeSpeak('Amen! '+cfg.verse, function(){}); } else { safeSpeak('Amen! Well said!'); }
+      setTimeout(cfg.next, cfg.verse?1400:(cfg.okText?1100:700)); }
     on($('#said'),'click',advance);
     if(hr){ var mic=$('#mic'); on(mic,'click',function(){ mic.classList.add('listening'); var mh=$('#mh'); if(mh) mh.textContent='Listening... say it now!'; stopSpeak();
       recognize(cfg.keys,false,function(){ advance(); },function(){ mic.classList.remove('listening'); var h=$('#mh'); if(h) h.textContent='Try again, or tap \u201CI said it ✓\u201D'; }); }); }
