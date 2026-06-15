@@ -88,7 +88,9 @@
   @keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-10px);}40%{transform:translateX(10px);}60%{transform:translateX(-7px);}80%{transform:translateX(7px);}}
   .progdot{display:inline-block; width:10px; height:10px; border-radius:50%; background:rgba(255,255,255,.25); margin:2px;}
   .progdot.on{background:var(--gold);}
-  .arena{position:relative; width:min(92vw,460px); height:290px; margin:8px auto; border-radius:24px; border:3px solid var(--gold-deep); overflow:hidden;}
+  .arena{position:relative; width:min(94vw,72vh); height:min(94vw,72vh); max-width:680px; max-height:680px; margin:8px auto; border-radius:24px; border:3px solid var(--gold-deep); overflow:hidden;}
+  .sheepy{position:absolute; cursor:grab; touch-action:none;} .sheepy:active{cursor:grabbing;}
+  .counter{position:absolute; top:10px; left:14px; font-family:'Baloo 2'; font-weight:800; font-size:26px; color:#1b4012; background:rgba(255,255,255,.7); border-radius:16px; padding:2px 12px;}
 </style>
 </head>
 <body>
@@ -249,6 +251,41 @@
     '<circle cx="-12" cy="-6" r="9" fill="#FFF7E6"/><circle cx="12" cy="-6" r="9" fill="#FFF7E6"/><circle cx="0" cy="-10" r="10" fill="#FFF7E6"/>'+
     '<ellipse cx="16" cy="2" rx="8" ry="7" fill="#3a2a2a"/><circle cx="19" cy="0" r="1.6" fill="#fff"/>'+
     '<line x1="-8" y1="14" x2="-8" y2="22" stroke="#3a2a2a" stroke-width="3"/><line x1="8" y1="14" x2="8" y2="22" stroke="#3a2a2a" stroke-width="3"/></g>'; }
+  function foldSVG(){ return '<g>'+
+    '<ellipse cx="0" cy="44" rx="92" ry="26" fill="#caa46a"/>'+
+    '<ellipse cx="0" cy="40" rx="78" ry="18" fill="#d8b87e"/>'+
+    '<g stroke="#7a5a30" stroke-width="7" stroke-linecap="round">'+
+      '<line x1="-82" y1="24" x2="-82" y2="-26"/><line x1="-42" y1="24" x2="-42" y2="-30"/>'+
+      '<line x1="0" y1="24" x2="0" y2="-34"/><line x1="42" y1="24" x2="42" y2="-30"/><line x1="82" y1="24" x2="82" y2="-26"/>'+
+      '<line x1="-86" y1="-22" x2="86" y2="-22"/><line x1="-86" y1="2" x2="86" y2="2"/></g>'+
+    '<path d="M-72 -34 L0 -66 L72 -34 Z" fill="#9b6b3a" stroke="#6e4a26" stroke-width="3"/>'+
+    '<rect x="-62" y="-36" width="124" height="7" rx="2" fill="#6e4a26"/></g>'; }
+  function lambSVG(){ return '<g transform="scale(0.62)">'+sheepSVG()+'</g>'; }
+
+  /* drag-or-tap: tap = trots to target; drag = follow finger, drop near target to count */
+  function tapOrDrag(el, arena, getTarget, onArrive){
+    var sx=0, sy=0, moved=false, dragging=false, ox=0, oy=0, origL='', origT='';
+    function topx(){ if(el.dataset.pxed) return; var r=el.getBoundingClientRect(), a=arena.getBoundingClientRect();
+      origL=(r.left-a.left)+'px'; origT=(r.top-a.top)+'px'; el.style.left=origL; el.style.top=origT; el.style.transition='none'; el.dataset.pxed='1'; }
+    function down(e){ e.preventDefault(); topx(); var p=e.touches?e.touches[0]:e; sx=p.clientX; sy=p.clientY; moved=false; dragging=true;
+      var r=el.getBoundingClientRect(); ox=sx-r.left; oy=sy-r.top; el.style.zIndex='20'; if(el.setPointerCapture&&e.pointerId!=null){ try{el.setPointerCapture(e.pointerId);}catch(_){} } }
+    function move(e){ if(!dragging) return; var p=e.touches?e.touches[0]:e; if(Math.abs(p.clientX-sx)+Math.abs(p.clientY-sy)>8) moved=true;
+      if(moved){ e.preventDefault(); var a=arena.getBoundingClientRect(); el.style.left=(p.clientX-a.left-ox)+'px'; el.style.top=(p.clientY-a.top-oy)+'px'; } }
+    function up(e){ if(!dragging) return; dragging=false; if(el.dataset.done) return;
+      var t=getTarget(); var r=el.getBoundingClientRect(); var cx=r.left+r.width/2, cy=r.top+r.height/2;
+      if(!moved){ arrive(t); }
+      else { var d=Math.sqrt((cx-t.vx)*(cx-t.vx)+(cy-t.vy)*(cy-t.vy)); if(d<(t.r||90)){ arrive(t); } else { el.style.transition='all .3s'; el.style.left=origL; el.style.top=origT; } } }
+    function arrive(t){ if(el.dataset.done) return; el.dataset.done='1';
+      var a=arena.getBoundingClientRect(); el.style.transition='all .5s';
+      el.style.left=(t.vx-a.left-el.offsetWidth/2)+'px'; el.style.top=(t.vy-a.top-el.offsetHeight/2)+'px'; el.style.opacity='.45';
+      var r=el.getBoundingClientRect(); sparkleAt(r.left+18,r.top); sfx('plink'); setTimeout(function(){ onArrive(); }, 520); }
+    el.addEventListener('pointerdown',down,{passive:false});
+    el.addEventListener('pointermove',move,{passive:false});
+    el.addEventListener('pointerup',up,{passive:false});
+    el.addEventListener('pointercancel',up,{passive:false});
+  }
+  function centerOf(targetEl, arena, radius){ var t=targetEl.getBoundingClientRect();
+    return {vx:t.left+t.width/2, vy:t.top+t.height/2, r:radius||90}; }
 
   /* ============ HELPERS ============ */
   function render(html){ stopSpeak(); app.innerHTML=html; }
@@ -298,10 +335,13 @@
     on($('#goName'),'click',function(){ var v=(inp.value||'').trim(); if(!v) return; addProfile(v); startProfile(v); });
     on($('#backName'),'click',profilesScreen);
   }
-  function startProfile(n){ addProfile(n); ST.save=loadSave(n); persist(); homeScreen(); }
+  function applyDailyReset(){ if(!ST.save) return; var today=new Date().toISOString().slice(0,10);
+    if(ST.save.lastDay!==today){ ST.save.chores.pray=false; ST.save.lastDay=today; persist(); } }
+  function startProfile(n){ addProfile(n); ST.save=loadSave(n); applyDailyReset(); persist(); homeScreen(); }
 
   /* ============ HOME ============ */
   function homeScreen(){
+    applyDailyReset();
     var done=choresDone(), pct=Math.round(done/5*100);
     var prayDone=ST.save.chores.pray;
     var order=['pray','sheep','food','sweep','sling'];
@@ -404,56 +444,112 @@
     renderLine();
   }
 
-  /* ============ CHORE: SHEEP (3 rounds) ============ */
+  /* ============ CHORE: SHEEP — A Shepherd's Day (7 rounds, tap-or-drag) ============ */
   function choreSheep(){
-    var round=1;
-    function r1(){ // gather 5 home
-      var pos=[[14,18],[68,12],[40,34],[78,44],[22,50]], items='';
-      for(var i=0;i<5;i++){ items+='<div class="tap sheepy" style="position:absolute; left:'+pos[i][0]+'%; top:'+pos[i][1]+'%"><svg width="60" height="50" viewBox="-26 -22 52 44">'+sheepSVG()+'</svg></div>'; }
-      render(topbar(false)+'<div class="screen" style="justify-content:flex-start; padding-top:60px">'+
-        choreHeader('sheep','Round 1 of 3 \u2014 lead them home')+
-        '<p class="narr" id="sn">Tap each sheep to lead it home. Count as you go!</p>'+
-        '<div class="arena" style="background:linear-gradient(180deg,#6FA84B,#4c7a34)"><div style="position:absolute; right:8px; bottom:8px; font-size:46px">🛖</div>'+items+'</div>'+
+    var names=['Bella','Snowy','Cloudy','Daisy','Patch'];
+
+    function moveRound(cfg){
+      var pos=[[16,20],[64,16],[40,42],[76,48],[22,58],[50,68]];
+      var svg=cfg.sheepSvg||sheepSVG, sheepHtml='';
+      for(var i=0;i<cfg.sheepN;i++){ sheepHtml+='<div class="sheepy" data-i="'+i+'" style="left:'+pos[i][0]+'%; top:'+pos[i][1]+'%"><svg width="66" height="56" viewBox="-28 -24 56 48">'+svg()+'</svg></div>'; }
+      render(topbar(false)+'<div class="screen" style="justify-content:flex-start; padding-top:54px">'+
+        choreHeader('sheep',cfg.sub)+
+        '<p class="narr" id="sn">'+cfg.narr+'</p>'+
+        '<div class="arena" id="arena" style="background:linear-gradient(180deg,#7FB84B,#4c7a34); touch-action:none">'+
+          cfg.targetHtml+'<div class="counter" id="cnt">🐑 0/'+cfg.sheepN+'</div>'+sheepHtml+'</div>'+
         '<button class="btn ghost small" id="backC">Back</button></div>');
       wireTop(); on($('#backC'),'click',homeScreen);
-      var got=0; safeSpeak('Round one. Lead all five sheep home. Tap each one and count!');
-      $all('.sheepy').forEach(function(s){ on(s,'click',function(){ if(s.dataset.done) return; s.dataset.done='1'; got++; sfx('plink');
-        var r=s.getBoundingClientRect(); sparkleAt(r.left+20,r.top); s.style.transition='all .5s'; s.style.left='82%'; s.style.top='70%'; s.style.opacity='.4';
-        $('#sn').textContent=got+' sheep home!'; safeSpeak(String(got));
-        if(got>=5){ setTimeout(r2,700); } }); });
+      safeSpeak(cfg.voice);
+      var arena=$('#arena'), got=0;
+      $all('.sheepy').forEach(function(s,idx){
+        tapOrDrag(s, arena, function(){ return centerOf($('#tgt'),arena,cfg.radius||100); }, function(){
+          got++; var c=$('#cnt'); if(c) c.textContent='🐑 '+got+'/'+cfg.sheepN;
+          if(cfg.names && cfg.names[idx]){ safeSpeak(cfg.names[idx]+'!'); } else { safeSpeak(String(got)); }
+          if(got>=cfg.sheepN){ var sn=$('#sn'); if(sn) sn.textContent=cfg.doneText; sfx('cheer'); safeSpeak(cfg.doneVoice); setTimeout(cfg.onDone,1300); }
+        });
+      });
     }
-    function r2(){ // water
-      var pos=[[12,16],[62,14],[34,30],[74,40],[20,48],[50,52]], items='';
-      for(var i=0;i<6;i++){ items+='<div class="tap sheepy" style="position:absolute; left:'+pos[i][0]+'%; top:'+pos[i][1]+'%"><svg width="56" height="46" viewBox="-26 -22 52 44">'+sheepSVG()+'</svg></div>'; }
-      render(topbar(false)+'<div class="screen" style="justify-content:flex-start; padding-top:60px">'+
-        choreHeader('sheep','Round 2 of 3 \u2014 lead them to water')+
-        '<p class="narr" id="sn">Tap each sheep to bring it to the still waters. Count to 6!</p>'+
-        '<div class="arena" style="background:linear-gradient(180deg,#6FA84B,#4c7a34)"><div style="position:absolute; left:8px; bottom:8px; font-size:42px">💧</div>'+items+'</div>'+
+    var davidTgt='<div id="tgt" style="position:absolute; left:12px; bottom:10px"><svg width="78" height="124" viewBox="-60 -110 120 150">'+davidSVG(0.82)+'</svg></div>';
+
+    function r_call(done){ moveRound({sub:'A Shepherd\u2019s Day \u2014 call them by name', sheepN:5, names:names,
+      narr:'Call each sheep \u2014 tap it, or drag it, to David!',
+      voice:'The sheep know his voice. He calleth his own sheep by name. Tap or drag each one to come to David!',
+      targetHtml:davidTgt, doneText:'They all know your voice! (John 10:3)', doneVoice:'They all came when you called! They know your voice.', onDone:done }); }
+
+    function r_pasture(done){ moveRound({sub:'Green pastures', sheepN:5,
+      narr:'Lead each sheep to the green grass to feed.',
+      voice:'He maketh me to lie down in green pastures. Lead each sheep to the green grass to eat.',
+      targetHtml:'<div id="tgt" style="position:absolute; left:50%; bottom:10px; transform:translateX(-50%); font-size:70px">🌿</div>',
+      doneText:'Fed in green pastures! (Psalm 23:2)', doneVoice:'Well fed! He maketh me to lie down in green pastures.', onDone:done }); }
+
+    function r_water(done){ moveRound({sub:'Still waters', sheepN:5,
+      narr:'Lead each sheep to the water to drink.',
+      voice:'He leadeth me beside the still waters. Lead each sheep to drink.',
+      targetHtml:'<div id="tgt" style="position:absolute; left:16px; bottom:12px; font-size:70px">💧</div>',
+      doneText:'Watered at the still waters! (Psalm 23:2)', doneVoice:'All watered! He leadeth me beside the still waters.', onDone:done }); }
+
+    function r_lamb(done){ moveRound({sub:'Carry the little lamb', sheepN:1, sheepSvg:lambSVG, names:['Little lamb'], radius:130,
+      narr:'The little lamb is too small to walk. Carry it to David!',
+      voice:'He shall gather the lambs with his arm, and carry them in his bosom. The little lamb is too small to walk. Carry it gently to David.',
+      targetHtml:davidTgt, doneText:'Carried in his arms! (Isaiah 40:11)', doneVoice:'You carried the little lamb in your arms, just like the Good Shepherd.', onDone:done }); }
+
+    function r_lost(done){
+      var decor=[[18,18],[64,14],[42,60],[80,30]];
+      var decorHtml=decor.map(function(p){ return '<div style="position:absolute; left:'+p[0]+'%; top:'+p[1]+'%"><svg width="60" height="50" viewBox="-28 -24 56 48">'+sheepSVG()+'</svg></div>'; }).join('');
+      var bushes=[[26,40],[55,26],[74,54]], lostIn=2;
+      var bushHtml=bushes.map(function(p,i){ return '<div class="tap bush" data-i="'+i+'" style="position:absolute; left:'+p[0]+'%; top:'+p[1]+'%; font-size:60px">🌳</div>'; }).join('');
+      render(topbar(false)+'<div class="screen" style="justify-content:flex-start; padding-top:54px">'+
+        choreHeader('sheep','The lost sheep')+
+        '<p class="narr" id="sn">Count them\u2026 only 4! One is lost. Tap the bushes to find it.</p>'+
+        '<div class="arena" id="arena" style="background:linear-gradient(180deg,#7FB84B,#4c7a34); touch-action:none">'+
+          davidTgt+'<div class="counter" id="cnt">🐑 4/5</div>'+decorHtml+bushHtml+'</div>'+
         '<button class="btn ghost small" id="backC">Back</button></div>');
       wireTop(); on($('#backC'),'click',homeScreen);
-      var got=0; safeSpeak('Round two. He leadeth me beside the still waters. Bring each sheep to the water!');
-      $all('.sheepy').forEach(function(s){ on(s,'click',function(){ if(s.dataset.done) return; s.dataset.done='1'; got++; sfx('plink');
-        var r=s.getBoundingClientRect(); sparkleAt(r.left+18,r.top); s.style.transition='all .5s'; s.style.left='6%'; s.style.top='72%'; s.style.opacity='.4';
-        $('#sn').textContent=got+' at the water!'; safeSpeak(String(got));
-        if(got>=6){ setTimeout(r3,700); } }); });
+      safeSpeak('The shepherd counts his sheep, and one is lost! He leaveth the ninety and nine, and goeth after that which is lost. Tap the bushes to find it!');
+      var arena=$('#arena');
+      $all('.bush').forEach(function(b){ on(b,'click',function(){
+        if(parseInt(b.getAttribute('data-i'),10)!==lostIn){ sfx('thud'); b.classList.add('shake'); safeSpeak('Not there\u2026 keep looking!'); setTimeout(function(){ b.classList.remove('shake'); },500); return; }
+        sfx('good'); var r=b.getBoundingClientRect(); sparkleAt(r.left+20,r.top);
+        var ls=document.createElement('div'); ls.className='sheepy'; ls.style.left=b.style.left; ls.style.top=b.style.top;
+        ls.innerHTML='<svg width="66" height="56" viewBox="-28 -24 56 48">'+sheepSVG()+'</svg>';
+        b.replaceWith(ls);
+        $('#sn').textContent='There it is! Carry the lost sheep home to David!';
+        safeSpeak('There it is! Now carry it home. Tap or drag the lost sheep to David!');
+        tapOrDrag(ls, arena, function(){ return centerOf($('#tgt'),arena,130); }, function(){
+          $('#cnt').textContent='🐑 5/5'; $('#sn').textContent='\u201CI have found my sheep which was lost!\u201D (Luke 15:6)';
+          sfx('cheer'); safeSpeak('Rejoice with me, for I have found my sheep which was lost!'); setTimeout(done,1400);
+        });
+      }); });
     }
-    function r3(){ // lion & bear (gentle)
-      render(topbar(false)+'<div class="screen" style="justify-content:flex-start; padding-top:60px">'+
-        choreHeader('sheep','Round 3 of 3 \u2014 keep them safe')+
+
+    function r_guard(done){
+      render(topbar(false)+'<div class="screen" style="justify-content:flex-start; padding-top:54px">'+
+        choreHeader('sheep','Guard the flock')+
         '<p class="narr" id="sn">A lion and a bear come near! Tap them to send them away in God\u2019s strength.</p>'+
-        '<div class="arena" style="background:linear-gradient(180deg,#6FA84B,#3c5f28)">'+
-          '<div style="position:absolute; left:30px; bottom:14px"><svg width="60" height="100" viewBox="-60 -110 120 150">'+davidSVG(0.7)+'</svg></div>'+
-          '<div class="tap beast" data-b="1" style="position:absolute; right:30px; top:30px; font-size:54px">🦁</div>'+
-          '<div class="tap beast" data-b="2" style="position:absolute; right:120px; bottom:30px; font-size:54px">🐻</div>'+
-        '</div>'+
+        '<div class="arena" id="arena" style="background:linear-gradient(180deg,#7FB84B,#3c5f28)">'+
+          davidTgt+
+          '<div class="tap beast" style="position:absolute; right:30px; top:30px; font-size:64px">🦁</div>'+
+          '<div class="tap beast" style="position:absolute; right:130px; bottom:40px; font-size:64px">🐻</div></div>'+
         '<button class="btn ghost small" id="backC">Back</button></div>');
       wireTop(); on($('#backC'),'click',homeScreen);
       var n=2; safeSpeak('A lion and a bear! David trusted God and was not afraid. Tap them to send them away!');
       $all('.beast').forEach(function(b){ on(b,'click',function(){ if(b.dataset.done) return; b.dataset.done='1'; sfx('thud');
-        var r=b.getBoundingClientRect(); sparkleAt(r.left+20,r.top); b.style.transition='all .6s'; b.style.transform='translateX(200px)'; b.style.opacity='0';
-        n--; if(n<=0){ $('#sn').textContent='Safe! \u201CThe LORD delivered me from the lion and the bear.\u201D'; safeSpeak('Safe! The Lord that delivered me from the lion and the bear will deliver me from the giant too!'); setTimeout(function(){ completeChore('sheep'); },1400); } }); });
+        var r=b.getBoundingClientRect(); sparkleAt(r.left+20,r.top); b.style.transition='all .6s'; b.style.transform='translateX(220px)'; b.style.opacity='0'; n--;
+        if(n<=0){ $('#sn').textContent='Safe! \u201CThe LORD delivered me from the lion and the bear.\u201D (1 Samuel 17:37)'; safeSpeak('Safe! The Lord that delivered me from the lion and the bear will deliver me from the giant too!'); setTimeout(done,1400); } }); });
     }
-    r1();
+
+    function r_fold(done){ moveRound({sub:'Evening \u2014 gather to the fold', sheepN:6, radius:130,
+      narr:'Gather every sheep into the fold for the night. Count them \u2014 none missing!',
+      voice:'Evening comes. Gather all the sheep safely into the fold for the night, and count them.',
+      targetHtml:'<div id="tgt" style="position:absolute; right:8px; bottom:6px"><svg width="184" height="132" viewBox="-100 -70 200 140">'+foldSVG()+'</svg></div>',
+      doneText:'All safe in the fold \u2014 none missing!', doneVoice:'All safe in the fold. The Lord is my shepherd; I shall not want.', onDone:done }); }
+
+    var rounds=[r_call,r_pasture,r_water,r_lamb,r_lost,r_guard,r_fold];
+    var idx=ST.save.sheepRound||0; if(idx>=rounds.length) idx=0;
+    function step(){ idx++; ST.save.sheepRound=idx; persist();
+      if(idx>=rounds.length){ ST.save.sheepRound=0; persist(); completeChore('sheep'); }
+      else { rounds[idx](step); } }
+    rounds[idx](step);
   }
 
   /* ============ CHORE: FOOD (pack list -> walk -> give) ============ */
