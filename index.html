@@ -162,6 +162,19 @@
     }catch(e){ onFail&&onFail('err'); return null; }
   }
   function hasMic(){ return !!(window.SpeechRecognition||window.webkitSpeechRecognition); }
+  function speakThen(text, next, pad){ safeSpeak(text, function(){ setTimeout(next, pad||300); }); }
+  function listenPatient(keys, lenient, onMatch, onEnd){
+    var Rec=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!Rec){ if(onEnd) onEnd('nomic'); return null; }
+    try{
+      var r=new Rec(); r.lang='en-US'; r.continuous=true; r.interimResults=true; r.maxAlternatives=3; var matched=false;
+      function ok(text){ var s=text.toLowerCase().replace(/[^a-z ]/g,' '); if(!keys.length) return true; var h=keys.filter(function(k){return s.indexOf(k)>-1;}).length; return lenient? h>=1 : h>=keys.length; }
+      r.onresult=function(ev){ var all=''; for(var i=0;i<ev.results.length;i++){ for(var j=0;j<ev.results[i].length;j++){ all+=' '+ev.results[i][j].transcript; } } if(!matched && ok(all)){ matched=true; try{r.stop();}catch(_){} onMatch(); } };
+      r.onerror=function(){};
+      r.onend=function(){ clearTimeout(r._to); if(onEnd) onEnd(matched?'matched':'end'); };
+      r.start(); r._to=setTimeout(function(){ try{r.stop();}catch(_){} }, 15000); return r;
+    }catch(e){ if(onEnd) onEnd('err'); return null; }
+  }
 
   /* ============ SAVE / SETTINGS ============ */
   var PROF_KEY='dg_profiles_v2', PIN_KEY='dg_pin_v2', PRAY_KEY='dg_prayers_v2';
@@ -312,7 +325,7 @@
       '<p class="narr" style="max-width:440px">Be faithful in the little things \u2014 then face the giant in the name of the LORD!</p>'+
       '<button class="btn" id="startBtn">Tap to Begin ▶</button>'+
       '<p class="hint">Turn your sound on \u2014 David will talk to you!</p>'+
-      '<p class="hint" style="opacity:.55">v2.2 \u00b7 Helping Day\u2019s Day</p></div>');
+      '<p class="hint" style="opacity:.55">v2.3 \u00b7 reads + listens\u2019s Day</p></div>');
     on($('#startBtn'),'click',function(){ unlockAudio(); setTimeout(profilesScreen,120); });
   }
   function profilesScreen(){
@@ -404,33 +417,27 @@
     LORDS.forEach(function(l){ lines.push({t:l.t,keys:l.keys,lenient:false,lords:true}); });
     var i=0;
     function renderLine(){
-      var ln=lines[i];
+      var ln=lines[i], advanced=false, curRec=null;
       var lordsTag=ln.lords?'<p class="ref">The Lord\u2019s Prayer</p>':'<p class="ref">Morning Prayer</p>';
       render(topbar(false)+'<div class="screen" style="justify-content:flex-start; padding-top:60px">'+
         '<div style="font-size:46px">🙏</div>'+lordsTag+
         '<p class="hint">Line '+(i+1)+' of '+lines.length+'</p>'+
         '<div class="speak-box"><p class="speak-line">\u201C'+ln.t+'\u201D</p></div>'+
-        (hasMic()?'<div class="mic" id="mic">🎤</div><p class="hint" id="mh">Tap the mic and say it out loud</p>'
+        (hasMic()?'<div class="mic" id="mic">🎤</div><p class="hint" id="mh">Listen, then say it \u2014 take your time</p>'
                  :'<p class="hint">Say it out loud together!</p>')+
         '<div class="row"><button class="btn small ghost" id="repeat">🔊 Hear again</button>'+
         '<button class="btn" id="said">I said it ✓</button></div>'+
         '<button class="btn ghost small" id="exitP" style="margin-top:4px">Exit</button></div>');
       wireTop();
-      safeSpeak(ln.t, null, {rate:0.86});
-      function advance(){ sfx('good'); var m=$('#mic'); if(m) m.classList.remove('listening');
-        i++; if(i>=lines.length){ donePrayer(); } else { setTimeout(renderLine,500); } }
+      function advance(){ if(advanced) return; advanced=true; if(curRec){ try{curRec.stop();}catch(_){} } sfx('good'); var m=$('#mic'); if(m) m.classList.remove('listening'); i++; if(i>=lines.length){ donePrayer(); } else { setTimeout(renderLine,450); } }
+      function startListen(){ if(!hasMic()||advanced) return; var mic=$('#mic'); if(mic) mic.classList.add('listening'); var mh=$('#mh'); if(mh) mh.textContent='Your turn \u2014 say it now (take your time)'; stopSpeak();
+        curRec=listenPatient(ln.keys, ln.lenient, function(){ advance(); }, function(){ var m=$('#mic'); if(m) m.classList.remove('listening'); if(!advanced){ var h=$('#mh'); if(h) h.textContent='Tap the mic to try again, or \u201CI said it ✓\u201D'; } }); }
       on($('#said'),'click',advance);
-      on($('#repeat'),'click',function(){ safeSpeak(ln.t,null,{rate:0.82}); });
+      on($('#repeat'),'click',function(){ if(advanced) return; safeSpeak(ln.t, function(){ startListen(); }, {rate:0.82}); });
       on($('#exitP'),'click',homeScreen);
-      if(hasMic()){
-        var mic=$('#mic');
-        on(mic,'click',function(){
-          mic.classList.add('listening'); var mh=$('#mh'); if(mh) mh.textContent='Listening... say it now!'; stopSpeak();
-          recognize(ln.keys, ln.lenient, function(){ advance(); }, function(){
-            mic.classList.remove('listening'); var h=$('#mh'); if(h) h.textContent='Try again, or tap \u201CI said it ✓\u201D';
-          });
-        });
-      }
+      if(hasMic()){ on($('#mic'),'click',startListen); }
+      // read the line aloud, then automatically begin listening so children just repeat it
+      safeSpeak(ln.t, function(){ startListen(); }, {rate:0.84});
     }
     function donePrayer(){
       sfx('amen');
@@ -439,7 +446,7 @@
         '<h2>Amen!</h2><p class="narr">You sought God first. Now the day\u2019s work is open.</p>'+
         '<div class="speak-box"><p class="verse">\u201C'+CHORE_VERSE.pray.verse+'\u201D</p><p class="ref">'+CHORE_VERSE.pray.ref+'</p></div>'+
         '<button class="btn" id="toHome">Go to chores ▶</button></div>');
-      safeSpeak('Amen! Well done. You sought God first. Now your chores are open.');
+      safeSpeak('Amen! Well done. You sought God first. '+CHORE_VERSE.pray.verse);
       on($('#toHome'),'click',homeScreen);
     }
     renderLine();
@@ -466,7 +473,7 @@
         tapOrDrag(s, arena, function(){ return centerOf($('#tgt'),arena,cfg.radius||100); }, function(){
           got++; var c=$('#cnt'); if(c) c.textContent='🐑 '+got+'/'+cfg.sheepN;
           if(cfg.names && cfg.names[idx]){ safeSpeak(cfg.names[idx]+'!'); } else { safeSpeak(String(got)); }
-          if(got>=cfg.sheepN){ var sn=$('#sn'); if(sn) sn.textContent=cfg.doneText; sfx('cheer'); safeSpeak(cfg.doneVoice); setTimeout(cfg.onDone,1300); }
+          if(got>=cfg.sheepN){ var sn=$('#sn'); if(sn) sn.textContent=cfg.doneText; sfx('cheer'); speakThen(cfg.doneVoice, cfg.onDone, 450); }
         });
       });
     }
@@ -518,7 +525,7 @@
         safeSpeak('There it is! Now carry it home. Tap or drag the lost sheep to David!');
         tapOrDrag(ls, arena, function(){ return centerOf($('#tgt'),arena,130); }, function(){
           $('#cnt').textContent='🐑 5/5'; $('#sn').textContent='\u201CI have found my sheep which was lost!\u201D (Luke 15:6)';
-          sfx('cheer'); safeSpeak('Rejoice with me, for I have found my sheep which was lost!'); setTimeout(done,1400);
+          sfx('cheer'); speakThen('Rejoice with me, for I have found my sheep which was lost!', done, 450);
         });
       }); });
     }
@@ -536,7 +543,7 @@
       var n=2; safeSpeak('A lion and a bear! David trusted God and was not afraid. Tap them to send them away!');
       $all('.beast').forEach(function(b){ on(b,'click',function(){ if(b.dataset.done) return; b.dataset.done='1'; sfx('thud');
         var r=b.getBoundingClientRect(); sparkleAt(r.left+20,r.top); b.style.transition='all .6s'; b.style.transform='translateX(220px)'; b.style.opacity='0'; n--;
-        if(n<=0){ $('#sn').textContent='Safe! \u201CThe LORD delivered me from the lion and the bear.\u201D (1 Samuel 17:37)'; safeSpeak('Safe! The Lord that delivered me from the lion and the bear will deliver me from the giant too!'); setTimeout(done,1400); } }); });
+        if(n<=0){ $('#sn').textContent='Safe! \u201CThe LORD delivered me from the lion and the bear.\u201D (1 Samuel 17:37)'; speakThen('Safe! The Lord that delivered me from the lion and the bear will deliver me from the giant too!', done, 450); } }); });
     }
 
     function r_fold(done){ moveRound({sub:'Evening \u2014 gather to the fold', sheepN:6, radius:130,
@@ -571,7 +578,7 @@
       $all('.sheepy').forEach(function(el){
         tapOrDrag(el, arena, function(){ return centerOf($('#tgt'),arena,cfg.radius||100); }, function(){
           got++; var c=$('#cnt'); if(c) c.textContent=(cfg.icon||'🧺')+' '+got+'/'+cfg.need; safeSpeak(String(got));
-          if(got>=cfg.need){ var sn=$('#sn'); if(sn) sn.textContent=cfg.doneText; sfx('cheer'); safeSpeak(cfg.doneVoice); setTimeout(cfg.onDone,1300); }
+          if(got>=cfg.need){ var sn=$('#sn'); if(sn) sn.textContent=cfg.doneText; sfx('cheer'); speakThen(cfg.doneVoice, cfg.onDone, 450); }
         });
       });
     }
@@ -597,7 +604,7 @@
       var n=0, d=$('#dough');
       on(d,'click',function(){ n++; sfx('tap'); d.style.transform='translate(-50%,-50%) scale('+(1+n*0.05)+')';
         $('#cnt').textContent=n+'/8'; if(n<8) safeSpeak(String(n));
-        if(n>=8){ d.textContent='🍞'; $('#sn').textContent='Fresh bread, baked with love!'; sfx('cheer'); safeSpeak('Fresh bread, baked with love!'); setTimeout(done,1200); } });
+        if(n>=8){ d.textContent='🍞'; $('#sn').textContent='Fresh bread, baked with love!'; sfx('cheer'); speakThen('Fresh bread, baked with love!', done, 350); } });
     }
 
     function s_pack(done){
@@ -871,7 +878,7 @@
         '<p class="verse" style="color:#3a2470">\u201CAnd all this assembly shall know that the LORD saveth not with sword and spear: for the battle is the LORD\u2019S.\u201D</p>'+
         '<p class="ref">1 Samuel 17:47 \u2014 your memory verse</p></div>'+
       '<div class="row"><button class="btn" id="again">Play Again ▶</button><button class="btn ghost" id="home2">Home 🏠</button></div></div>');
-    sfx('cheer'); safeSpeak('Victory! '+ST.save.name+', you are a Kingdom Hero! Remember: the battle is the Lord\u2019s. Well done!');
+    sfx('cheer'); safeSpeak('Victory! '+ST.save.name+', you are a Kingdom Hero! And all this assembly shall know that the LORD saveth not with sword and spear: for the battle is the LORD\u2019S. Well done!');
     on($('#again'),'click',battleReveal); on($('#home2'),'click',homeScreen);
   }
 
@@ -886,12 +893,11 @@
     safeSpeak(cfg.setup+' '+cfg.line);
     var done=false;
     function advance(){ if(done) return; done=true; sfx('good'); stopSpeak(); var m=$('#mic'); if(m) m.classList.remove('listening');
-      if(cfg.okText){ safeSpeak(cfg.okText, function(){}); }
-      else if(cfg.verse){ safeSpeak('Amen! '+cfg.verse, function(){}); } else { safeSpeak('Amen! Well said!'); }
-      setTimeout(cfg.next, cfg.verse?1400:(cfg.okText?1100:700)); }
+      var line = cfg.okText ? cfg.okText : (cfg.verse ? ('Amen! '+cfg.verse) : 'Amen! Well said!');
+      speakThen(line, cfg.next, 400); }
     on($('#said'),'click',advance);
-    if(hr){ var mic=$('#mic'); on(mic,'click',function(){ mic.classList.add('listening'); var mh=$('#mh'); if(mh) mh.textContent='Listening... say it now!'; stopSpeak();
-      recognize(cfg.keys,false,function(){ advance(); },function(){ mic.classList.remove('listening'); var h=$('#mh'); if(h) h.textContent='Try again, or tap \u201CI said it ✓\u201D'; }); }); }
+    if(hr){ var mic=$('#mic'); on(mic,'click',function(){ mic.classList.add('listening'); var mh=$('#mh'); if(mh) mh.textContent='Listening\u2026 say it now (take your time)'; stopSpeak();
+      listenPatient(cfg.keys,false,function(){ advance(); },function(){ mic.classList.remove('listening'); if(!done){ var h=$('#mh'); if(h) h.textContent='Tap the mic to try again, or \u201CI said it ✓\u201D'; } }); }); }
   }
 
   /* ============ PARENT SECTION ============ */
