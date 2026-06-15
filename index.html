@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#2A1A4A">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>David &amp; the Giant — Kingdom Hero</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#2A1A4A; --bg2:#3D2766; --purple:#5B3A9E; --purple-lt:#7C5BC0;
+    --gold:#F4C542; --gold-lt:#FFD86B; --gold-deep:#C9962A;
+    --cream:#FFF7E6; --green:#4CC38A; --red:#E0644B; --ink:#1B1030;
+    --shadow:0 8px 24px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:'Nunito',-apple-system,system-ui,sans-serif;
+    background:radial-gradient(circle at 50% 0%, #3D2766 0%, #2A1A4A 60%, #1B1030 100%);
+    color:var(--cream); overflow:hidden; position:fixed; inset:0;
+    -webkit-user-select:none; user-select:none; touch-action:manipulation;
+  }
+  #app{position:absolute; inset:0; display:flex; flex-direction:column;}
+  .screen{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:env(safe-area-inset-top) 18px env(safe-area-inset-bottom); text-align:center; animation:fadein .4s ease;}
+  @keyframes fadein{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;}}
+  h1,h2,h3{font-family:'Baloo 2',cursive; line-height:1.05; font-weight:800;}
+  h1{font-size:clamp(34px,9vw,58px); color:var(--gold-lt); text-shadow:0 3px 0 var(--gold-deep), 0 6px 18px rgba(0,0,0,.4);}
+  h2{font-size:clamp(24px,6.5vw,38px); color:var(--gold-lt); text-shadow:0 2px 0 var(--gold-deep);}
+  .verse{font-style:italic; color:#E7D9FF; font-size:clamp(15px,4.2vw,19px); max-width:560px; line-height:1.4; margin:10px auto;}
+  .ref{font-family:'Baloo 2'; color:var(--gold); font-weight:700; font-size:14px; letter-spacing:.5px; text-transform:uppercase;}
+  .narr{font-size:clamp(17px,4.8vw,22px); font-weight:700; max-width:600px; line-height:1.35; margin:14px auto;}
+  .btn{font-family:'Baloo 2'; font-weight:800; font-size:clamp(18px,5.4vw,24px); color:var(--ink);
+    background:linear-gradient(180deg,var(--gold-lt),var(--gold)); border:none; border-radius:22px;
+    padding:16px 30px; margin:8px; box-shadow:0 6px 0 var(--gold-deep), var(--shadow); cursor:pointer;
+    transition:transform .08s, box-shadow .08s; min-width:180px; min-height:60px;}
+  .btn:active{transform:translateY(4px); box-shadow:0 2px 0 var(--gold-deep), var(--shadow);}
+  .btn.ghost{background:linear-gradient(180deg,var(--purple-lt),var(--purple)); color:var(--cream); box-shadow:0 6px 0 #3a2470, var(--shadow);}
+  .btn.ghost:active{box-shadow:0 2px 0 #3a2470;}
+  .btn.small{font-size:16px; padding:11px 20px; min-width:auto; min-height:48px; border-radius:16px;}
+  .row{display:flex; flex-wrap:wrap; justify-content:center; align-items:center;}
+  .topbar{position:absolute; top:env(safe-area-inset-top); left:0; right:0; height:54px; display:flex; align-items:center; justify-content:space-between; padding:8px 14px; z-index:30;}
+  .pill{background:rgba(0,0,0,.3); border:2px solid var(--gold); border-radius:30px; padding:6px 14px; font-family:'Baloo 2'; font-weight:700; color:var(--gold-lt); font-size:14px; display:flex; align-items:center; gap:6px;}
+  .iconbtn{width:44px; height:44px; border-radius:50%; background:rgba(0,0,0,.3); border:2px solid var(--gold); color:var(--gold-lt); font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer;}
+  svg{display:block; overflow:visible;}
+  .stage-svg{width:min(92vw,520px); height:auto; margin:6px auto;}
+  .tap{cursor:pointer; transition:transform .15s;}
+  .tap:active{transform:scale(.92);}
+  /* meter */
+  .meter-wrap{width:min(88vw,420px); margin:14px auto;}
+  .meter-label{display:flex; justify-content:space-between; font-family:'Baloo 2'; font-weight:700; color:var(--gold-lt); font-size:15px; margin-bottom:6px;}
+  .meter{height:22px; background:rgba(0,0,0,.35); border-radius:30px; border:2px solid var(--gold-deep); overflow:hidden;}
+  .meter-fill{height:100%; width:0%; background:linear-gradient(90deg,var(--gold),var(--gold-lt)); border-radius:30px; transition:width .6s cubic-bezier(.2,.8,.2,1);}
+  /* chore grid */
+  .chore-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:12px; width:min(92vw,460px); margin:8px auto;}
+  .chore-card{background:linear-gradient(180deg,var(--purple),var(--bg2)); border:3px solid var(--gold-deep); border-radius:20px; padding:14px 10px; cursor:pointer; position:relative; transition:transform .1s; box-shadow:var(--shadow);}
+  .chore-card:active{transform:scale(.96);}
+  .chore-card.done{border-color:var(--green); opacity:.9;}
+  .chore-card .emoji{font-size:42px;}
+  .chore-card .nm{font-family:'Baloo 2'; font-weight:700; font-size:16px; margin-top:4px; color:var(--gold-lt);}
+  .chore-card .check{position:absolute; top:6px; right:8px; font-size:22px; color:var(--green); display:none;}
+  .chore-card.done .check{display:block;}
+  /* profiles */
+  .prof{display:flex; flex-direction:column; align-items:center; gap:6px; background:linear-gradient(180deg,var(--purple),var(--bg2)); border:3px solid var(--gold); border-radius:24px; padding:18px 22px; cursor:pointer; min-width:120px; transition:transform .1s;}
+  .prof:active{transform:scale(.95);}
+  .prof .ava{font-size:54px;}
+  .prof .pn{font-family:'Baloo 2'; font-weight:800; font-size:20px; color:var(--gold-lt);}
+  .field{font-size:22px; padding:14px; border-radius:16px; border:3px solid var(--gold); background:var(--cream); color:var(--ink); font-family:'Baloo 2'; font-weight:700; text-align:center; width:min(80vw,320px);}
+  .speak-box{background:rgba(0,0,0,.35); border:3px solid var(--gold); border-radius:20px; padding:18px; width:min(92vw,560px); margin:10px auto;}
+  .speak-line{font-family:'Baloo 2'; font-weight:800; font-size:clamp(22px,6.5vw,32px); color:var(--gold-lt); line-height:1.2;}
+  .mic{width:90px; height:90px; border-radius:50%; background:linear-gradient(180deg,var(--red),#b8472f); border:4px solid var(--cream); font-size:40px; color:#fff; display:flex; align-items:center; justify-content:center; margin:12px auto; cursor:pointer; box-shadow:var(--shadow);}
+  .mic.listening{animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{transform:scale(1); box-shadow:0 0 0 0 rgba(224,100,75,.6);} 50%{transform:scale(1.06); box-shadow:0 0 0 18px rgba(224,100,75,0);}}
+  .hint{color:#C9B8E8; font-size:14px; margin-top:6px;}
+  .sparkle{position:absolute; pointer-events:none; font-size:28px; animation:spark .8s ease forwards;}
+  @keyframes spark{0%{opacity:1; transform:translateY(0) scale(.5);} 100%{opacity:0; transform:translateY(-60px) scale(1.4);}}
+  .badge-card{background:linear-gradient(180deg,var(--gold-lt),var(--gold)); color:var(--ink); border-radius:24px; padding:20px; width:min(90vw,420px); box-shadow:var(--shadow); border:4px solid var(--cream);}
+  .badge-card .ref{color:var(--gold-deep);}
+  .dust{cursor:grab;}
+  .toast{position:absolute; bottom:90px; left:50%; transform:translateX(-50%); background:var(--green); color:#06301e; font-family:'Baloo 2'; font-weight:800; padding:12px 22px; border-radius:30px; font-size:18px; box-shadow:var(--shadow); animation:fadein .3s; z-index:50;}
+  @media (prefers-reduced-motion: reduce){*{animation-duration:.01ms !important;}}
+  .floor{position:absolute; bottom:0; left:0; right:0; display:flex; justify-content:center; gap:10px; padding:14px; z-index:20;}
+  .grow-in{animation:grow .9s cubic-bezier(.2,.9,.3,1.2);}
+  @keyframes grow{from{transform:scale(.2); opacity:0;} to{transform:scale(1); opacity:1;}}
+  .shake{animation:shake .5s;}
+  @keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-10px);}40%{transform:translateX(10px);}60%{transform:translateX(-7px);}80%{transform:translateX(7px);}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+"use strict";
+(function(){
+  var app = document.getElementById('app');
+
+  /* ---------------- AUDIO ---------------- */
+  var audioCtx = null, ttsUnlocked = false, soundOn = true;
+  function unlockAudio(){
+    try{
+      if(!audioCtx){ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+      if(audioCtx.state === 'suspended'){ audioCtx.resume(); }
+      // warm up speech
+      if(window.speechSynthesis){
+        var u = new SpeechSynthesisUtterance(' ');
+        u.volume = 0; window.speechSynthesis.speak(u);
+      }
+      ttsUnlocked = true;
+    }catch(e){}
+  }
+  function tone(freq, dur, type, vol){
+    if(!soundOn || !audioCtx) return;
+    try{
+      var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = type||'sine'; o.frequency.value = freq;
+      g.gain.value = (vol==null?0.12:vol);
+      o.connect(g); g.connect(audioCtx.destination);
+      var t = audioCtx.currentTime;
+      g.gain.setValueAtTime(g.gain.value, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (dur||0.18));
+      o.start(t); o.stop(t + (dur||0.18));
+    }catch(e){}
+  }
+  function sfx(name){
+    if(name==='plink'){ tone(880,0.12,'triangle',0.15); }
+    else if(name==='good'){ tone(660,0.1,'sine',0.14); setTimeout(function(){tone(990,0.16,'sine',0.14);},90); }
+    else if(name==='whoosh'){ tone(300,0.25,'sawtooth',0.08); }
+    else if(name==='thud'){ tone(120,0.35,'square',0.18); }
+    else if(name==='cheer'){ [523,659,784,1047].forEach(function(f,i){ setTimeout(function(){tone(f,0.22,'sine',0.13);}, i*120); }); }
+    else if(name==='tap'){ tone(520,0.06,'triangle',0.1); }
+  }
+  var currentUtter = null;
+  function safeSpeak(text, cb, opts){
+    opts = opts||{};
+    if(!window.speechSynthesis || !ttsUnlocked){ if(cb) setTimeout(cb, 400); return; }
+    try{
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.rate = opts.rate || 0.92; u.pitch = opts.pitch==null?1.05:opts.pitch; u.volume = 1;
+      u.onend = function(){ if(cb) cb(); };
+      u.onerror = function(){ if(cb) cb(); };
+      currentUtter = u;
+      window.speechSynthesis.speak(u);
+    }catch(e){ if(cb) cb(); }
+  }
+  function stopSpeak(){ try{ if(window.speechSynthesis) window.speechSynthesis.cancel(); }catch(e){} }
+
+  /* ---------------- SAVE ---------------- */
+  function profKey(){ return 'dg_profiles_v1'; }
+  function saveKey(name){ return 'dg_save_v1_' + name; }
+  function getProfiles(){
+    try{ return JSON.parse(localStorage.getItem(profKey())||'[]'); }catch(e){ return []; }
+  }
+  function addProfile(name){
+    var p = getProfiles();
+    if(p.indexOf(name) === -1){ p.push(name); localStorage.setItem(profKey(), JSON.stringify(p)); }
+  }
+  function freshSave(name){
+    return { name:name, chores:{sheep:false,food:false,sweep:false,pray:false,sling:false}, battleStage:0, badges:[], wins:0 };
+  }
+  function loadSave(name){
+    try{ var s = JSON.parse(localStorage.getItem(saveKey(name))); return s && s.chores ? s : freshSave(name); }
+    catch(e){ return freshSave(name); }
+  }
+  function persist(){ if(ST.save){ try{ localStorage.setItem(saveKey(ST.save.name), JSON.stringify(ST.save)); }catch(e){} } }
+  function choresDone(){ var c = ST.save.chores; var n=0; for(var k in c){ if(c[k]) n++; } return n; }
+  function allChoresDone(){ return choresDone() >= 5; }
+
+  /* ---------------- STATE ---------------- */
+  var ST = { save:null };
+
+  /* ---------------- SVG ART ---------------- */
+  function davidSVG(scale, opts){
+    opts = opts || {}; scale = scale||1;
+    var crown = opts.crown ? '<path d="M-26 -86 l8 -16 8 12 8 -16 8 12 8 -16 v18 z" fill="#FFD86B" stroke="#C9962A" stroke-width="2"/>' : '';
+    return '<g transform="scale('+scale+')">'+
+      crown+
+      // head
+      '<circle cx="0" cy="-64" r="20" fill="#E8B894"/>'+
+      '<path d="M-20 -70 q-2 -22 20 -22 q22 0 20 22 q-8 -8 -20 -8 q-12 0 -20 8z" fill="#5A3A22"/>'+
+      '<circle cx="-7" cy="-66" r="2.6" fill="#1B1030"/><circle cx="8" cy="-66" r="2.6" fill="#1B1030"/>'+
+      '<path d="M-6 -56 q6 5 12 0" stroke="#7a4a2a" stroke-width="2.4" fill="none" stroke-linecap="round"/>'+
+      // body tunic
+      '<path d="M-22 -44 q22 -10 44 0 l-6 50 q-16 8 -32 0 z" fill="#F4C542" stroke="#C9962A" stroke-width="3"/>'+
+      '<path d="M-22 -44 q22 -10 44 0 l-3 14 q-19 -8 -38 0z" fill="#FFD86B"/>'+
+      // belt
+      '<rect x="-19" y="-2" width="38" height="8" rx="3" fill="#8A5A2A"/>'+
+      // arms
+      '<path d="M-20 -40 q-18 8 -22 30" stroke="#E8B894" stroke-width="9" fill="none" stroke-linecap="round"/>'+
+      '<path d="M20 -40 q16 6 18 22" stroke="#E8B894" stroke-width="9" fill="none" stroke-linecap="round"/>'+
+      // legs
+      '<path d="M-10 6 l-3 30" stroke="#7C5BC0" stroke-width="11" stroke-linecap="round"/>'+
+      '<path d="M10 6 l3 30" stroke="#7C5BC0" stroke-width="11" stroke-linecap="round"/>'+
+      '</g>';
+  }
+  function goliathSVG(scale){
+    scale = scale||1;
+    return '<g transform="scale('+scale+')">'+
+      // legs
+      '<path d="M-16 30 l-6 46" stroke="#4a4036" stroke-width="20" stroke-linecap="round"/>'+
+      '<path d="M16 30 l6 46" stroke="#4a4036" stroke-width="20" stroke-linecap="round"/>'+
+      // body armor
+      '<path d="M-34 -34 q34 -16 68 0 l-8 72 q-26 12 -52 0z" fill="#6B5B4A" stroke="#2E2A22" stroke-width="4"/>'+
+      '<path d="M-30 -20 h60 M-30 -2 h60 M-30 16 h60" stroke="#2E2A22" stroke-width="3" opacity=".5"/>'+
+      // arms
+      '<path d="M-32 -28 q-26 14 -28 44" stroke="#8a7a64" stroke-width="16" fill="none" stroke-linecap="round"/>'+
+      '<path d="M32 -28 q28 10 30 40" stroke="#8a7a64" stroke-width="16" fill="none" stroke-linecap="round"/>'+
+      // spear
+      '<line x1="60" y1="-60" x2="50" y2="80" stroke="#5a3a22" stroke-width="5"/>'+
+      '<path d="M60 -60 l-8 -18 l16 4z" fill="#b9b2a6"/>'+
+      // head + helmet
+      '<circle cx="0" cy="-54" r="24" fill="#9a8468"/>'+
+      '<path d="M-26 -58 q0 -30 26 -30 q26 0 26 30 q-10 -10 -26 -10 q-16 0 -26 10z" fill="#4a4036"/>'+
+      '<rect x="-3" y="-78" width="6" height="16" fill="#E0644B"/>'+
+      '<circle cx="-9" cy="-54" r="3" fill="#1B1030"/><circle cx="9" cy="-54" r="3" fill="#1B1030"/>'+
+      '<path d="M-10 -42 q10 6 20 0" stroke="#3a2a1a" stroke-width="3" fill="none" stroke-linecap="round"/>'+
+      '</g>';
+  }
+  function sheepSVG(){
+    return '<g>'+
+      '<ellipse cx="0" cy="0" rx="20" ry="15" fill="#FFF7E6"/>'+
+      '<circle cx="-12" cy="-6" r="9" fill="#FFF7E6"/><circle cx="12" cy="-6" r="9" fill="#FFF7E6"/>'+
+      '<circle cx="0" cy="-10" r="10" fill="#FFF7E6"/>'+
+      '<ellipse cx="16" cy="2" rx="8" ry="7" fill="#3a2a2a"/>'+
+      '<circle cx="19" cy="0" r="1.6" fill="#fff"/>'+
+      '<line x1="-8" y1="14" x2="-8" y2="22" stroke="#3a2a2a" stroke-width="3"/>'+
+      '<line x1="8" y1="14" x2="8" y2="22" stroke="#3a2a2a" stroke-width="3"/>'+
+      '</g>';
+  }
+
+  /* ---------------- HELPERS ---------------- */
+  function render(html){ stopSpeak(); app.innerHTML = html; }
+  function $(sel,root){ return (root||document).querySelector(sel); }
+  function $all(sel,root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
+  function on(elm,ev,fn){ if(elm) elm.addEventListener(ev,fn,{passive:false}); }
+  function sparkleAt(x,y){
+    var s = document.createElement('div'); s.className='sparkle'; s.textContent='✨';
+    s.style.left=x+'px'; s.style.top=y+'px'; document.body.appendChild(s);
+    setTimeout(function(){ s.remove(); }, 800);
+  }
+  function toast(msg){
+    var t = document.createElement('div'); t.className='toast'; t.textContent=msg;
+    app.appendChild(t); setTimeout(function(){ t.remove(); }, 1600);
+  }
+  function topbar(){
+    return '<div class="topbar">'+
+      '<div class="pill">⭐ '+(ST.save?ST.save.name:'')+'</div>'+
+      '<div class="iconbtn" id="muteBtn">'+(soundOn?'🔊':'🔇')+'</div>'+
+    '</div>';
+  }
+  function wireTop(){
+    on($('#muteBtn'),'click',function(){ soundOn=!soundOn; if(!soundOn) stopSpeak(); this.textContent=soundOn?'🔊':'🔇'; });
+  }
+
+  /* ---------------- SCRIPTURE DATA ---------------- */
+  var CHORES = [
+    {key:'sheep', emoji:'🐑', name:'Mind the Sheep', virtue:'Be faithful with the little things',
+      verse:'The LORD is my shepherd; I shall not want.', ref:'Psalm 23:1'},
+    {key:'food', emoji:'🧺', name:'Food for Mum & Dad', virtue:'Honour your father and mother',
+      verse:'Honour thy father and thy mother.', ref:'Exodus 20:12'},
+    {key:'sweep', emoji:'🧹', name:'Sweep the House', virtue:'Do small work with all your might',
+      verse:'Whatsoever thy hand findeth to do, do it with thy might.', ref:'Ecclesiastes 9:10'},
+    {key:'pray', emoji:'🙏', name:'Morning Prayer', virtue:'Seek God first, every day',
+      verse:'Seek ye first the kingdom of God.', ref:'Matthew 6:33'},
+    {key:'sling', emoji:'🎯', name:'Practise the Sling', virtue:'Get ready for the day God calls you',
+      verse:'A man\u2019s gift maketh room for him.', ref:'Proverbs 18:16'}
+  ];
+
+  /* ================= SCREENS ================= */
+
+  function gateScreen(){
+    render('<div class="screen">'+
+      '<div style="font-size:80px" class="grow-in">⚔️</div>'+
+      '<h1>David &amp; the Giant</h1>'+
+      '<p class="ref">A Kingdom Hero Adventure</p>'+
+      '<p class="narr" style="max-width:420px">Be faithful in the little things \u2014 then face the giant in the name of the LORD!</p>'+
+      '<button class="btn" id="startBtn">Tap to Begin ▶</button>'+
+      '<p class="hint">Turn your sound on \u2014 David will talk to you!</p>'+
+    '</div>');
+    on($('#startBtn'),'click',function(){
+      unlockAudio();
+      setTimeout(profilesScreen, 120);
+    });
+  }
+
+  function profilesScreen(){
+    var profs = getProfiles();
+    var cards = profs.map(function(n){
+      var ava = n==='Anu'?'👧':(n==='Dominion'?'👦':'⭐');
+      return '<div class="prof" data-name="'+n.replace(/"/g,'')+'"><div class="ava">'+ava+'</div><div class="pn">'+n+'</div></div>';
+    }).join('');
+    render('<div class="screen">'+
+      '<h2>Who is playing?</h2>'+
+      '<div class="row" style="margin:14px 0; gap:14px">'+cards+
+        '<div class="prof" id="addProf"><div class="ava">➕</div><div class="pn">New</div></div>'+
+      '</div>'+
+    '</div>');
+    $all('.prof[data-name]').forEach(function(c){
+      on(c,'click',function(){ sfx('tap'); startProfile(c.getAttribute('data-name')); });
+    });
+    on($('#addProf'),'click',function(){ sfx('tap'); newNameScreen(); });
+  }
+
+  function newNameScreen(){
+    render('<div class="screen">'+
+      '<h2>What is your name,<br>little shepherd?</h2>'+
+      '<input class="field" id="nameIn" maxlength="14" placeholder="Type name" autocomplete="off">'+
+      '<div class="row"><button class="btn" id="goName">That\u2019s me! ▶</button>'+
+      '<button class="btn ghost small" id="backName">Back</button></div>'+
+    '</div>');
+    var inp = $('#nameIn'); setTimeout(function(){ inp.focus(); }, 200);
+    on($('#goName'),'click',function(){
+      var v = (inp.value||'').trim(); if(!v) return;
+      addProfile(v); startProfile(v);
+    });
+    on($('#backName'),'click',profilesScreen);
+  }
+
+  function startProfile(name){
+    addProfile(name);
+    ST.save = loadSave(name);
+    persist();
+    homeScreen();
+  }
+
+  /* ----- HOME HUB ----- */
+  function homeScreen(){
+    var done = choresDone(), pct = Math.round(done/5*100);
+    var cards = CHORES.map(function(c){
+      var d = ST.save.chores[c.key];
+      return '<div class="chore-card '+(d?'done':'')+'" data-key="'+c.key+'">'+
+        '<div class="check">✓</div>'+
+        '<div class="emoji">'+c.emoji+'</div>'+
+        '<div class="nm">'+c.name+'</div>'+
+      '</div>';
+    }).join('');
+    var pathBtn = allChoresDone()
+      ? '<button class="btn" id="goBattle" style="animation:pulse 1.4s infinite">Go to the Camp ⚔️</button>'
+      : '<button class="btn ghost" id="lockedBtn">🔒 Finish all chores</button>';
+    render(topbar()+
+      '<div class="screen" style="justify-content:flex-start; padding-top:64px">'+
+      '<h2>Faithful in the Little</h2>'+
+      '<div class="meter-wrap">'+
+        '<div class="meter-label"><span>Faithfulness</span><span>'+done+' / 5</span></div>'+
+        '<div class="meter"><div class="meter-fill" id="mf"></div></div>'+
+      '</div>'+
+      '<div class="chore-grid">'+cards+'</div>'+
+      '<div style="margin-top:14px">'+pathBtn+'</div>'+
+      '<button class="btn ghost small" id="switchP" style="margin-top:6px">Switch player</button>'+
+    '</div>');
+    wireTop();
+    setTimeout(function(){ var mf=$('#mf'); if(mf) mf.style.width = pct+'%'; }, 80);
+    $all('.chore-card').forEach(function(card){
+      on(card,'click',function(){
+        var k = card.getAttribute('data-key'); sfx('tap');
+        if(ST.save.chores[k]){ replayChore(k); } else { startChore(k); }
+      });
+    });
+    if(allChoresDone()){
+      on($('#goBattle'),'click',function(){ sfx('good'); battleReveal(); });
+      if(!ST.save._welcomedFull){ ST.save._welcomedFull=true; safeSpeak('Well done! You were faithful in everything. Now go, in the name of the Lord!'); }
+    } else {
+      on($('#lockedBtn'),'click',function(){ safeSpeak('Finish all your chores first, then the path to the camp will open.'); toast('Finish all chores first!'); });
+    }
+    on($('#switchP'),'click',profilesScreen);
+  }
+  function replayChore(k){ startChore(k); }
+
+  function choreIntro(c, body){
+    return topbar()+'<div class="screen" style="justify-content:flex-start; padding-top:64px">'+
+      '<h2>'+c.emoji+' '+c.name+'</h2>'+
+      '<p class="ref">'+c.virtue+'</p>'+
+      body+
+    '</div>';
+  }
+  function completeChore(k){
+    ST.save.chores[k] = true; persist();
+    var c = CHORES.filter(function(x){return x.key===k;})[0];
+    sfx('cheer');
+    render('<div class="screen">'+
+      '<div style="font-size:70px" class="grow-in">⭐</div>'+
+      '<h2>'+c.name+' \u2014 done!</h2>'+
+      '<div class="speak-box"><p class="verse">\u201C'+c.verse+'\u201D</p><p class="ref">'+c.ref+'</p></div>'+
+      '<button class="btn" id="backHome">Back to chores ▶</button>'+
+    '</div>');
+    safeSpeak(c.name+' done! '+c.verse);
+    on($('#backHome'),'click',homeScreen);
+  }
+
+  function startChore(k){
+    if(k==='sheep') choreSheep();
+    else if(k==='food') choreFood();
+    else if(k==='sweep') choreSweep();
+    else if(k==='pray') chorePray();
+    else if(k==='sling') choreSling();
+  }
+
+  /* CHORE: SHEEP — tap to gather 5 sheep into the fold */
+  function choreSheep(){
+    var c = CHORES[0];
+    var sheep = '';
+    var positions = [[14,18],[68,12],[40,30],[78,40],[22,46]];
+    for(var i=0;i<5;i++){
+      sheep += '<div class="tap sheepy" data-i="'+i+'" style="position:absolute; left:'+positions[i][0]+'%; top:'+positions[i][1]+'%">'+
+        '<svg width="64" height="52" viewBox="-26 -22 52 44">'+sheepSVG()+'</svg></div>';
+    }
+    render(choreIntro(c,
+      '<p class="narr" id="sn">Tap each sheep to lead it home. Count them as you go!</p>'+
+      '<div style="position:relative; width:min(92vw,460px); height:300px; margin:0 auto; background:linear-gradient(180deg,#6FA84B,#4c7a34); border-radius:24px; border:3px solid var(--gold-deep); overflow:hidden">'+
+        '<div style="position:absolute; right:8px; bottom:8px; font-size:46px">🛖</div>'+
+        sheep+
+      '</div>'+
+      '<button class="btn ghost small" id="backC">Back</button>'
+    ));
+    wireTop();
+    var got = 0;
+    safeSpeak('Lead all five sheep safely home. Tap each one!');
+    $all('.sheepy').forEach(function(s){
+      on(s,'click',function(e){
+        if(s.dataset.done) return; s.dataset.done='1';
+        got++; sfx('plink');
+        var r = s.getBoundingClientRect(); sparkleAt(r.left+20, r.top);
+        s.style.transition='all .5s'; s.style.left='82%'; s.style.top='70%'; s.style.opacity='.4';
+        var sn=$('#sn'); if(sn) sn.textContent = got+' sheep home!';
+        safeSpeak(String(got));
+        if(got>=5){ setTimeout(function(){ completeChore('sheep'); }, 700); }
+      });
+    });
+    on($('#backC'),'click',homeScreen);
+  }
+
+  /* CHORE: FOOD — tap 3 foods into basket, then carry to parents */
+  function choreFood(){
+    var c = CHORES[1];
+    var foods = [['🍞',12,20],['🧀',60,16],['🫓',38,44],['🍇',74,46],['🥖',20,52]];
+    var items='';
+    foods.forEach(function(f,i){ items+='<div class="tap fooditem" data-i="'+i+'" style="position:absolute; left:'+f[1]+'%; top:'+f[2]+'%; font-size:46px">'+f[0]+'</div>'; });
+    render(choreIntro(c,
+      '<p class="narr" id="fn">Pack 3 foods into the basket for Mum and Dad.</p>'+
+      '<div style="position:relative; width:min(92vw,460px); height:280px; margin:0 auto; background:linear-gradient(180deg,#caa46a,#9b7a44); border-radius:24px; border:3px solid var(--gold-deep); overflow:hidden">'+
+        '<div id="basket" style="position:absolute; left:50%; bottom:6px; transform:translateX(-50%); font-size:60px">🧺</div>'+
+        items+
+      '</div>'+
+      '<button class="btn ghost small" id="backC">Back</button>'
+    ));
+    wireTop();
+    var packed=0;
+    safeSpeak('Pack three foods into the basket for your mother and father.');
+    $all('.fooditem').forEach(function(it){
+      on(it,'click',function(){
+        if(packed>=3 || it.dataset.done) return; it.dataset.done='1';
+        packed++; sfx('plink');
+        var r=it.getBoundingClientRect(); sparkleAt(r.left+18,r.top);
+        it.style.transition='all .5s'; it.style.left='50%'; it.style.top='80%'; it.style.opacity='0';
+        var fn=$('#fn'); if(fn) fn.textContent = packed+' / 3 packed';
+        if(packed>=3) setTimeout(carryToParents, 600);
+      });
+    });
+    on($('#backC'),'click',homeScreen);
+  }
+  function carryToParents(){
+    var c = CHORES[1];
+    render(choreIntro(c,
+      '<p class="narr">Carry the basket to Mum and Dad.</p>'+
+      '<div style="font-size:64px; margin:10px">🧺</div>'+
+      '<div class="row" style="gap:24px; font-size:60px"><span>👩🏽</span><span>👨🏽</span></div>'+
+      '<button class="btn" id="give">Give the food ▶</button>'
+    ));
+    wireTop();
+    safeSpeak('Carry the basket to your mum and dad.');
+    on($('#give'),'click',function(){
+      sfx('good');
+      safeSpeak('Thank you, '+ST.save.name+'! God bless you for honouring us.', function(){});
+      toast('"Bless you, '+ST.save.name+'!"');
+      setTimeout(function(){ completeChore('food'); }, 900);
+    });
+  }
+
+  /* CHORE: SWEEP — swipe over dust piles to clear them */
+  function choreSweep(){
+    var c = CHORES[2];
+    var piles='';
+    var pos=[[18,30],[42,55],[66,28],[30,70],[72,62]];
+    for(var i=0;i<5;i++){ piles+='<div class="dust" data-i="'+i+'" style="position:absolute; left:'+pos[i][0]+'%; top:'+pos[i][1]+'%; font-size:34px">💨</div>'; }
+    render(choreIntro(c,
+      '<p class="narr" id="swn">Drag your finger over the dust to sweep it away! (5 spots)</p>'+
+      '<div id="floorbox" style="position:relative; width:min(92vw,460px); height:300px; margin:0 auto; background:linear-gradient(180deg,#b58d5a,#8a6638); border-radius:24px; border:3px solid var(--gold-deep); overflow:hidden; touch-action:none">'+
+        '<div style="position:absolute; left:50%; top:8px; transform:translateX(-50%); font-size:46px">🧹</div>'+
+        piles+
+      '</div>'+
+      '<button class="btn ghost small" id="backC">Back</button>'
+    ));
+    wireTop();
+    var cleared=0, box=$('#floorbox');
+    safeSpeak('Sweep all the dust away. Drag your finger over each spot!');
+    function clearAt(cx,cy){
+      $all('.dust',box).forEach(function(d){
+        if(d.dataset.gone) return;
+        var r=d.getBoundingClientRect();
+        if(cx>r.left-24 && cx<r.right+24 && cy>r.top-24 && cy<r.bottom+24){
+          d.dataset.gone='1'; d.style.transition='opacity .3s'; d.style.opacity='0';
+          cleared++; sfx('tap'); sparkleAt(r.left+16,r.top);
+          var sw=$('#swn'); if(sw) sw.textContent = cleared+' / 5 clean';
+          if(cleared>=5) setTimeout(function(){ completeChore('sweep'); }, 500);
+        }
+      });
+    }
+    var down=false;
+    on(box,'pointerdown',function(e){ down=true; clearAt(e.clientX,e.clientY); });
+    on(box,'pointermove',function(e){ if(down){ e.preventDefault(); clearAt(e.clientX,e.clientY); } });
+    on(box,'pointerup',function(){ down=false; });
+    on(box,'pointerleave',function(){ down=false; });
+    on($('#backC'),'click',homeScreen);
+  }
+
+  /* CHORE: PRAY — tap to kneel, verse glows, Amen */
+  function chorePray(){
+    var c = CHORES[3];
+    render(choreIntro(c,
+      '<p class="narr" id="pn">Tap David to kneel and pray.</p>'+
+      '<div id="dav" class="tap" style="margin:8px auto"><svg class="stage-svg" style="width:140px" viewBox="-60 -110 120 160">'+davidSVG(1)+'</svg></div>'+
+      '<div id="prayverse" style="opacity:0; transition:opacity .8s"><div class="speak-box"><p class="verse">\u201CSeek ye first the kingdom of God, and his righteousness.\u201D</p><p class="ref">Matthew 6:33</p></div></div>'+
+      '<button class="btn" id="amen" style="display:none">Amen 🙏</button>'
+    ));
+    wireTop();
+    safeSpeak('Tap David to kneel and pray.');
+    on($('#dav'),'click',function(){
+      this.style.transform='translateY(20px) scale(.85)';
+      $('#prayverse').style.opacity='1';
+      $('#pn').textContent='David prays...';
+      $('#amen').style.display='inline-block';
+      sfx('good');
+      safeSpeak('Seek ye first the kingdom of God, and his righteousness.');
+    });
+    on($('#amen'),'click',function(){ sfx('good'); completeChore('pray'); });
+  }
+
+  /* CHORE: SLING practice — teaches hold-spin-release on a hay target */
+  function choreSling(){
+    var c = CHORES[2];
+    render(choreIntro(CHORES[4],
+      '<p class="narr" id="sln">Hold the button to spin the sling, let go to throw at the target! (Hit it 2 times)</p>'+
+      slingArena('🎯', 2)
+    ));
+    wireTop();
+    safeSpeak('Hold the button to spin your sling. Let go to throw! Hit the target two times.');
+    setupSling(2, function(){ completeChore('sling'); }, function(left){
+      var s=$('#sln'); if(s) s.textContent = left>0 ? ('Great! '+left+' more to go!') : 'Bullseye!';
+    });
+  }
+
+  /* Reusable sling arena markup */
+  function slingArena(targetEmoji, hits){
+    return '<div id="arena" style="position:relative; width:min(92vw,460px); height:300px; margin:8px auto; background:linear-gradient(180deg,#8Fb6e0,#6FA84B 70%); border-radius:24px; border:3px solid var(--gold-deep); overflow:hidden">'+
+        '<div id="slinger" style="position:absolute; left:40px; bottom:18px"><svg width="90" height="130" viewBox="-60 -110 120 150">'+davidSVG(0.95)+'</svg></div>'+
+        '<div id="target" style="position:absolute; right:30px; bottom:60px; font-size:60px">'+targetEmoji+'</div>'+
+        '<div id="stone" style="position:absolute; left:70px; bottom:70px; font-size:24px; opacity:0">🪨</div>'+
+        '<div id="spinRing" style="position:absolute; left:54px; bottom:40px; width:48px; height:48px; border-radius:50%; border:5px solid rgba(255,255,255,.4); border-top-color:var(--gold); opacity:0"></div>'+
+      '</div>'+
+      '<button class="btn" id="throwBtn" style="user-select:none">Hold to Spin 🪢</button>';
+  }
+
+  /* Sling engine: hold to spin (ring speeds up), release to throw (auto-aim hit) */
+  function setupSling(needed, onDone, onHit){
+    var btn=$('#throwBtn'), ring=$('#spinRing'), stone=$('#stone'), target=$('#target'), arena=$('#arena');
+    var spinning=false, power=0, raf=null, hits=0, rot=0;
+    function loop(){
+      if(!spinning) return;
+      power = Math.min(power+0.04, 1);
+      rot += 8 + power*22;
+      ring.style.transform='rotate('+rot+'deg)';
+      ring.style.opacity='1';
+      raf=requestAnimationFrame(loop);
+    }
+    function startSpin(e){ if(e) e.preventDefault(); if(spinning) return; spinning=true; power=0; sfx('whoosh'); btn.textContent='Let go to THROW!'; loop(); }
+    function release(e){
+      if(e) e.preventDefault();
+      if(!spinning) return; spinning=false; cancelAnimationFrame(raf);
+      ring.style.opacity='0'; btn.textContent='Hold to Spin 🪢'; btn.disabled=true;
+      throwStone();
+    }
+    function throwStone(){
+      sfx('whoosh');
+      var aR=arena.getBoundingClientRect(), tR=target.getBoundingClientRect();
+      var startX=70, startY= aR.height-70;
+      var endX = (tR.left - aR.left) + tR.width/2 - 12;
+      var endY = aR.height - ((aR.bottom - tR.top) - tR.height/2);
+      stone.style.opacity='1';
+      var t=0;
+      (function fly(){
+        t += 0.045;
+        if(t>=1){
+          stone.style.opacity='0';
+          hit();
+          return;
+        }
+        var x = startX + (endX-startX)*t;
+        var arc = -120*Math.sin(Math.PI*t); // arc up
+        var y = startY + (endY-startY)*t + arc;
+        stone.style.left=x+'px'; stone.style.bottom=(aR.height - y)+'px';
+        requestAnimationFrame(fly);
+      })();
+    }
+    function hit(){
+      hits++; sfx('thud'); target.style.transform='scale(1.3) rotate(15deg)';
+      var tR=target.getBoundingClientRect(); sparkleAt(tR.left+20,tR.top);
+      arena.classList.add('shake'); setTimeout(function(){ arena.classList.remove('shake'); },500);
+      setTimeout(function(){ target.style.transform='none'; },300);
+      var left = needed - hits;
+      if(onHit) onHit(left);
+      if(hits>=needed){ sfx('cheer'); setTimeout(onDone, 800); }
+      else { btn.disabled=false; }
+    }
+    on(btn,'pointerdown',startSpin);
+    on(btn,'pointerup',release);
+    on(btn,'pointerleave',function(e){ if(spinning) release(e); });
+    on(btn,'touchstart',startSpin);
+    on(btn,'touchend',release);
+  }
+
+  /* ================= BATTLE ACT ================= */
+  function battleReveal(){
+    render(topbar()+'<div class="screen">'+
+      '<p class="ref">Act 2 — The Valley of Elah</p>'+
+      '<p class="narr" id="bn">Jesse sent David with food to his brothers at the camp. There David saw a giant...</p>'+
+      '<div id="scene" style="position:relative; width:min(92vw,460px); height:280px; margin:8px auto">'+
+        '<div id="gol" style="position:absolute; right:20px; bottom:0; opacity:0"><svg width="150" height="240" viewBox="-70 -90 140 180">'+goliathSVG(1.3)+'</svg></div>'+
+        '<div style="position:absolute; left:18px; bottom:0"><svg width="70" height="120" viewBox="-60 -110 120 150">'+davidSVG(0.8)+'</svg></div>'+
+      '</div>'+
+      '<button class="btn" id="next">▶</button>'+
+    '</div>');
+    wireTop();
+    safeSpeak('Jesse sent David with food to his brothers at the camp. There, David saw a giant named Goliath.', function(){
+      var g=$('#gol'); if(g){ g.style.transition='all 1s cubic-bezier(.2,.9,.3,1.3)'; g.classList.add('grow-in'); g.style.opacity='1'; }
+      sfx('thud');
+      setTimeout(function(){ safeSpeak('Goliath was over nine feet tall! He shouted, who will fight me? But David was not afraid, for he knew the living God.'); var b=$('#bn'); if(b) b.textContent='Goliath roared, "Who will fight me?" But David knew the living God!'; }, 1000);
+    });
+    on($('#next'),'click',battleSaul);
+  }
+
+  /* SPEAK #1 */
+  function battleSaul(){
+    speakCheckpoint({
+      ref:'1 Samuel 17:37',
+      setup:'King Saul said, "You are only a boy!" David answered with faith. Say it with him:',
+      line:'The LORD will deliver me',
+      keywords:['lord','deliver'],
+      speaker:'👑',
+      next: battleArmor
+    });
+  }
+
+  /* ARMOR — tap pieces to remove */
+  function battleArmor(){
+    render(topbar()+'<div class="screen">'+
+      '<p class="ref">1 Samuel 17:39</p>'+
+      '<p class="narr" id="an">Saul put his heavy armour on David. It was too big! Tap each piece to take it off.</p>'+
+      '<div style="position:relative; margin:6px auto; width:200px; height:240px">'+
+        '<svg width="200" height="240" viewBox="-60 -110 120 160" style="position:absolute; left:0; top:0">'+davidSVG(1.1)+'</svg>'+
+        '<div class="tap armorp" data-p="helmet" style="position:absolute; left:78px; top:6px; font-size:38px">⛑️</div>'+
+        '<div class="tap armorp" data-p="vest" style="position:absolute; left:74px; top:96px; font-size:44px">🦺</div>'+
+        '<div class="tap armorp" data-p="sword" style="position:absolute; left:140px; top:120px; font-size:40px">⚔️</div>'+
+      '</div>'+
+      '<button class="btn ghost small" id="skip" style="display:none">Continue ▶</button>'+
+    '</div>');
+    wireTop();
+    safeSpeak('Saul put his heavy armour on David, but it was too big and too heavy. Tap each piece to take it off. David will win God\u2019s way!');
+    var n=3;
+    $all('.armorp').forEach(function(p){
+      on(p,'click',function(){
+        if(p.dataset.gone) return; p.dataset.gone='1';
+        p.style.transition='all .5s'; p.style.transform='translateY(120px) rotate(40deg)'; p.style.opacity='0';
+        sfx('plink'); var r=p.getBoundingClientRect(); sparkleAt(r.left+16,r.top);
+        n--;
+        if(n<=0){ var an=$('#an'); if(an) an.textContent='Now David is free to win God\u2019s way!'; safeSpeak('Now David is free! He will win God\u2019s way, not man\u2019s way.'); var s=$('#skip'); s.style.display='inline-block'; on(s,'click',battleStones); }
+      });
+    });
+  }
+
+  /* FIVE STONES — tap 5 smooth (not rough) */
+  function battleStones(){
+    var stones = [
+      {smooth:true,x:14,y:24},{smooth:false,x:40,y:16},{smooth:true,x:66,y:28},
+      {smooth:true,x:24,y:54},{smooth:false,x:78,y:50},{smooth:true,x:50,y:62},
+      {smooth:true,x:70,y:70}
+    ];
+    var items='';
+    stones.forEach(function(s,i){
+      items+='<div class="tap stoney" data-smooth="'+(s.smooth?1:0)+'" data-i="'+i+'" style="position:absolute; left:'+s.x+'%; top:'+s.y+'%; font-size:'+(s.smooth?'30px':'36px')+'">'+(s.smooth?'⚪':'🪨')+'</div>';
+    });
+    render(topbar()+'<div class="screen">'+
+      '<p class="ref">1 Samuel 17:40</p>'+
+      '<p class="narr" id="stn">Pick 5 SMOOTH stones (round ⚪) from the brook. Count them!</p>'+
+      '<div style="position:relative; width:min(92vw,460px); height:280px; margin:6px auto; background:linear-gradient(180deg,#7fc0e8,#3f86b8); border-radius:24px; border:3px solid var(--gold-deep); overflow:hidden">'+items+
+        '<div style="position:absolute; left:8px; bottom:8px; font-size:30px">👝 <span id="cnt">0</span>/5</div>'+
+      '</div>'+
+    '</div>');
+    wireTop();
+    safeSpeak('David chose five smooth stones from the brook. Tap five smooth round stones, and count them!');
+    var got=0;
+    $all('.stoney').forEach(function(s){
+      on(s,'click',function(){
+        if(s.dataset.done) return;
+        if(s.getAttribute('data-smooth')==='0'){ sfx('thud'); s.classList.add('shake'); safeSpeak('That one is too rough. Find a smooth round one!'); setTimeout(function(){s.classList.remove('shake');},500); return; }
+        s.dataset.done='1'; got++; sfx('plink');
+        var r=s.getBoundingClientRect(); sparkleAt(r.left+14,r.top);
+        s.style.transition='all .5s'; s.style.left='6%'; s.style.top='84%'; s.style.opacity='0';
+        $('#cnt').textContent=got; safeSpeak(String(got));
+        if(got>=5){ var st=$('#stn'); if(st) st.textContent='Five smooth stones \u2014 ready!'; setTimeout(battleShowdown, 800); }
+      });
+    });
+  }
+
+  /* SHOWDOWN — Speak #2 then #3 */
+  function battleShowdown(){
+    render(topbar()+'<div class="screen">'+
+      '<p class="ref">1 Samuel 17:45</p>'+
+      '<p class="narr" id="shn">Goliath laughed at the boy. But David ran toward him, shouting his faith!</p>'+
+      '<div style="position:relative; width:min(92vw,460px); height:220px; margin:6px auto">'+
+        '<div style="position:absolute; left:14px; bottom:0"><svg width="64" height="110" viewBox="-60 -110 120 150">'+davidSVG(0.7)+'</svg></div>'+
+        '<div style="position:absolute; right:14px; bottom:0"><svg width="130" height="200" viewBox="-70 -90 140 180">'+goliathSVG(1.15)+'</svg></div>'+
+      '</div>'+
+      '<button class="btn" id="go">Shout with David ▶</button>'+
+    '</div>');
+    wireTop();
+    safeSpeak('Goliath laughed at the boy. But David ran toward him, shouting his faith out loud!');
+    on($('#go'),'click',function(){
+      speakCheckpoint({
+        ref:'1 Samuel 17:45', speaker:'⚔️',
+        setup:'Shout it bravely:',
+        line:'I come to thee in the name of the LORD',
+        keywords:['name','lord'],
+        next:function(){
+          speakCheckpoint({
+            ref:'1 Samuel 17:47', speaker:'⚔️',
+            setup:'And one more, the greatest truth:',
+            line:'The battle is the LORD\u2019S',
+            keywords:['battle','lord'],
+            next: battleSling
+          });
+        }
+      });
+    });
+  }
+
+  /* THE SLING — real throw at Goliath */
+  function battleSling(){
+    render(topbar()+'<div class="screen">'+
+      '<p class="ref">1 Samuel 17:49</p>'+
+      '<p class="narr" id="sln2">Hold to spin your sling... let go to throw the stone in God\u2019s name!</p>'+
+      '<div id="arena" style="position:relative; width:min(92vw,460px); height:300px; margin:8px auto; background:linear-gradient(180deg,#8Fb6e0,#6FA84B 70%); border-radius:24px; border:3px solid var(--gold-deep); overflow:hidden">'+
+        '<div id="slinger" style="position:absolute; left:30px; bottom:18px"><svg width="80" height="120" viewBox="-60 -110 120 150">'+davidSVG(0.85)+'</svg></div>'+
+        '<div id="target" style="position:absolute; right:24px; bottom:30px"><svg id="golsvg" width="130" height="200" viewBox="-70 -90 140 180">'+goliathSVG(1.15)+'</svg></div>'+
+        '<div id="stone" style="position:absolute; left:60px; bottom:80px; font-size:22px; opacity:0">⚪</div>'+
+        '<div id="spinRing" style="position:absolute; left:44px; bottom:40px; width:48px; height:48px; border-radius:50%; border:5px solid rgba(255,255,255,.4); border-top-color:var(--gold); opacity:0"></div>'+
+      '</div>'+
+      '<button class="btn" id="throwBtn">Hold to Spin 🪢</button>'+
+    '</div>');
+    wireTop();
+    safeSpeak('Hold the button to spin your sling. Let go to throw the stone, in the name of the Lord!');
+    // custom sling that topples Goliath
+    var btn=$('#throwBtn'), ring=$('#spinRing'), stone=$('#stone'), target=$('#target'), arena=$('#arena'), gol=$('#golsvg');
+    var spinning=false, power=0, raf=null, rot=0, thrown=false;
+    function loop(){ if(!spinning) return; power=Math.min(power+0.04,1); rot+=8+power*22; ring.style.transform='rotate('+rot+'deg)'; ring.style.opacity='1'; raf=requestAnimationFrame(loop); }
+    function startSpin(e){ if(e)e.preventDefault(); if(spinning||thrown) return; spinning=true; power=0; sfx('whoosh'); btn.textContent='Let go to THROW!'; loop(); }
+    function release(e){ if(e)e.preventDefault(); if(!spinning) return; spinning=false; cancelAnimationFrame(raf); ring.style.opacity='0'; btn.disabled=true; btn.textContent='...'; fly(); }
+    function fly(){
+      thrown=true; sfx('whoosh');
+      var aR=arena.getBoundingClientRect(), tR=target.getBoundingClientRect();
+      var startX=60, startY=aR.height-80;
+      var endX=(tR.left-aR.left)+tR.width/2-10;
+      var endY=aR.height-((aR.bottom-tR.top)+tR.height*0.2);
+      stone.style.opacity='1'; var t=0;
+      (function step(){ t+=0.04; if(t>=1){ stone.style.opacity='0'; topple(); return; }
+        var x=startX+(endX-startX)*t; var arc=-130*Math.sin(Math.PI*t); var y=startY+(endY-startY)*t+arc;
+        stone.style.left=x+'px'; stone.style.bottom=(aR.height-y)+'px'; requestAnimationFrame(step);
+      })();
+    }
+    function topple(){
+      sfx('thud'); arena.classList.add('shake');
+      gol.style.transition='transform 1s cubic-bezier(.3,.7,.4,1)';
+      gol.style.transformOrigin='bottom right';
+      gol.style.transform='rotate(85deg) translateY(20px)';
+      var tR=target.getBoundingClientRect(); sparkleAt(tR.left+30,tR.top+30); sparkleAt(tR.left+60,tR.top+10);
+      var s=$('#sln2'); if(s) s.textContent='The giant is down! The battle was the LORD\u2019S!';
+      safeSpeak('The stone struck, and the giant fell! The battle was the Lord\u2019s. You did it, '+ST.save.name+'!', function(){});
+      sfx('cheer');
+      setTimeout(battleVictory, 2200);
+    }
+    on(btn,'pointerdown',startSpin); on(btn,'pointerup',release);
+    on(btn,'pointerleave',function(e){ if(spinning) release(e); });
+    on(btn,'touchstart',startSpin); on(btn,'touchend',release);
+  }
+
+  function battleVictory(){
+    ST.save.wins = (ST.save.wins||0)+1;
+    if(ST.save.badges.indexOf('giant-slayer')===-1) ST.save.badges.push('giant-slayer');
+    persist();
+    render('<div class="screen">'+
+      '<div style="font-size:74px" class="grow-in">👑</div>'+
+      '<h1>Victory!</h1>'+
+      '<p class="narr">'+ST.save.name+' the Kingdom Hero!</p>'+
+      '<div class="badge-card">'+
+        '<div style="font-size:40px">🛡️⭐</div>'+
+        '<p class="verse" style="color:#3a2470">\u201CThe battle is the LORD\u2019S, and he will give you into our hands.\u201D</p>'+
+        '<p class="ref">1 Samuel 17:47 \u2014 your memory verse</p>'+
+      '</div>'+
+      '<div class="row">'+
+        '<button class="btn" id="again">Play Again ▶</button>'+
+        '<button class="btn ghost" id="home2">Home 🏠</button>'+
+      '</div>'+
+    '</div>');
+    sfx('cheer');
+    safeSpeak('Victory! '+ST.save.name+', you are a Kingdom Hero! Remember: the battle is the Lord\u2019s. Well done!');
+    on($('#again'),'click',battleReveal);
+    on($('#home2'),'click',homeScreen);
+  }
+
+  /* ----- SPEAK CHECKPOINT (fuzzy speech + guaranteed button) ----- */
+  function speakCheckpoint(cfg){
+    var hasRec = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+    render(topbar()+'<div class="screen">'+
+      '<p class="ref">'+cfg.ref+'</p>'+
+      '<div style="font-size:50px">'+(cfg.speaker||'⚔️')+'</div>'+
+      '<p class="narr">'+cfg.setup+'</p>'+
+      '<div class="speak-box"><p class="speak-line">\u201C'+cfg.line+'\u201D</p></div>'+
+      (hasRec? '<div class="mic" id="mic">🎤</div><p class="hint" id="mh">Tap the mic and say it out loud</p>' : '<p class="hint">Say it out loud together!</p>')+
+      '<button class="btn" id="said">I said it! ✓</button>'+
+    '</div>');
+    wireTop();
+    safeSpeak(cfg.setup+' '+cfg.line, function(){});
+    var done=false;
+    function advance(){ if(done) return; done=true; sfx('good'); stopSpeak(); var m=$('#mic'); if(m) m.classList.remove('listening'); safeSpeak('Amen! Well said!', function(){}); setTimeout(cfg.next, 700); }
+    on($('#said'),'click',advance);
+    if(hasRec){
+      var mic=$('#mic');
+      on(mic,'click',function(){
+        try{
+          var Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+          var r = new Rec(); r.lang='en-US'; r.interimResults=false; r.maxAlternatives=3;
+          mic.classList.add('listening'); var mh=$('#mh'); if(mh) mh.textContent='Listening... say it now!';
+          stopSpeak();
+          r.onresult=function(ev){
+            var ok=false;
+            for(var i=0;i<ev.results.length;i++){
+              for(var j=0;j<ev.results[i].length;j++){
+                var said=(ev.results[i][j].transcript||'').toLowerCase().replace(/[^a-z ]/g,' ');
+                var hit=cfg.keywords.every(function(k){ return said.indexOf(k)>-1; });
+                if(hit) ok=true;
+              }
+            }
+            mic.classList.remove('listening');
+            if(ok){ advance(); } else { var mh2=$('#mh'); if(mh2) mh2.textContent='Try again, or tap "I said it!"'; safeSpeak('Try once more, or tap the button.'); }
+          };
+          r.onerror=function(){ mic.classList.remove('listening'); var mh3=$('#mh'); if(mh3) mh3.textContent='Mic shy? Just tap "I said it!"'; };
+          r.onend=function(){ mic.classList.remove('listening'); };
+          r.start();
+        }catch(e){ var mh4=$('#mh'); if(mh4) mh4.textContent='Just tap "I said it!"'; }
+      });
+    }
+  }
+
+  /* ---------------- BOOT ---------------- */
+  gateScreen();
+})();
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
+</body>
+</html>
