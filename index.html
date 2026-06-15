@@ -137,7 +137,7 @@
   function stopSpeak(){ try{ if(window.speechSynthesis) window.speechSynthesis.cancel(); }catch(e){} }
 
   /* ============ SPEECH RECOGNITION ============ */
-  var STOP={the:1,and:1,for:1,you:1,your:1,this:1,that:1,with:1,into:1,are:1,our:1,his:1,her:1,him:1,she:1,but:1,not:1,was:1,from:1,thy:1,unto:1,hath:1};
+  var STOP={the:1,and:1,for:1,you:1,your:1,this:1,that:1,with:1,into:1,are:1,our:1,his:1,her:1,him:1,she:1,but:1,not:1,was:1,from:1,thy:1,unto:1,hath:1,father:1};
   function deriveKeys(text){
     var w=text.toLowerCase().replace(/[^a-z ]/g,' ').split(/\s+/).filter(function(x){return x.length>=4 && !STOP[x];});
     return w.slice(0,3);
@@ -168,7 +168,7 @@
     if(!Rec){ if(onEnd) onEnd('nomic'); return null; }
     try{
       var r=new Rec(); r.lang='en-US'; r.continuous=true; r.interimResults=true; r.maxAlternatives=3; var matched=false;
-      function ok(text){ var s=text.toLowerCase().replace(/[^a-z ]/g,' '); if(!keys.length) return true; var h=keys.filter(function(k){return s.indexOf(k)>-1;}).length; return lenient? h>=1 : h>=keys.length; }
+      function ok(text){ var s=text.toLowerCase().replace(/[^a-z ]/g,' '); if(!keys.length) return true; var h=keys.filter(function(k){return s.indexOf(k)>-1;}).length; var need=lenient?Math.min(keys.length,Math.min(3,Math.max(2,Math.ceil(keys.length*0.6)))):keys.length; return h>=need; }
       r.onresult=function(ev){ var all=''; for(var i=0;i<ev.results.length;i++){ for(var j=0;j<ev.results[i].length;j++){ all+=' '+ev.results[i][j].transcript; } } if(!matched && ok(all)){ matched=true; try{r.stop();}catch(_){} onMatch(); } };
       r.onerror=function(){};
       r.onend=function(){ clearTimeout(r._to); if(onEnd) onEnd(matched?'matched':'end'); };
@@ -325,7 +325,7 @@
       '<p class="narr" style="max-width:440px">Be faithful in the little things \u2014 then face the giant in the name of the LORD!</p>'+
       '<button class="btn" id="startBtn">Tap to Begin ▶</button>'+
       '<p class="hint">Turn your sound on \u2014 David will talk to you!</p>'+
-      '<p class="hint" style="opacity:.55">v2.3 \u00b7 reads + listens\u2019s Day</p></div>');
+      '<p class="hint" style="opacity:.55">v2.4 \u00b7 prayer match\u2019s Day</p></div>');
     on($('#startBtn'),'click',function(){ unlockAudio(); setTimeout(profilesScreen,120); });
   }
   function profilesScreen(){
